@@ -10,6 +10,7 @@ import ast
 import importlib.util
 from pathlib import Path
 from os.path import exists
+import os
 import networkx as nx
 from matplotlib import pyplot as plt
 
@@ -63,6 +64,11 @@ def resolveImport(n, filepath):
 
 	if p is not None:
 		node1 = Path(p).name
+		if "site-packages" in str(p):
+			path_component = str(p).split(os.sep)
+			# The name of the module is the element after site-packages
+			module_name = path_component[path_component.index("site-packages")+1]
+			node1 = f"[{module_name}] {node1}"
 		G.add_node(node1)
 		G.add_edge(node2, node1)
 	else:
@@ -132,6 +138,6 @@ def exploreTree(s, filepath):
 
 exploreTree(s, path)
 # Display the graph generated
-pos = nx.spring_layout(G, k=0.5, iterations=30)
+pos = nx.spring_layout(G, k=0.3, iterations=100)
 nx.draw(G,pos, with_labels = True)
 plt.show()
