@@ -57,8 +57,9 @@ def resolveImport(n, filepath):
 	global alreadySeen
 	node2 = Path(filepath).name
 	p = package_name_to_path(n, str(filepath))
-	print(f"Name: {n}")
-	print(f"	Path: {p}")
+
+	# print(f"Name: {n}")
+	# print(f"	Path: {p}")
 
 	if p is not None:
 		node1 = Path(p).name
@@ -67,6 +68,9 @@ def resolveImport(n, filepath):
 	else:
 		node1 = n
 		G.add_edge(node2, node1)
+
+	if "lib" in str(p) and "site-packages" not in str(p):
+		return # Don't resolve native dependencies to avoid noise in graph
 
 	if p is not None and str(p).endswith(".py"):
 		if p in alreadySeen: return
@@ -110,6 +114,7 @@ def exploreTree(s, filepath):
 		for name in s.names:
 			module_name = "." + name.name
 			if s.module is not None:
+				resolveImport(s.module, fp)
 				module_name = s.module + "." + name.name
 
 			# Try to import the thing as a whole file, if not just the module name
@@ -117,7 +122,6 @@ def exploreTree(s, filepath):
 			# from <big module> import <filename>
 			# from <small module> import <specific function>
 			resolveImport(module_name, fp)
-			resolveImport(name.name, fp)
 
 	else:
 		pass

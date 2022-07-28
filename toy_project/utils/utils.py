@@ -1,5 +1,6 @@
 import math
-import sys
+import random
+import numpy as np
 
 def square(x):
 	"""
