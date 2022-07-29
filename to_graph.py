@@ -10,16 +10,22 @@ import ast
 import importlib.util
 from pathlib import Path
 import os
-import networkx as nx
-from matplotlib import pyplot as plt
+import networkx as nx # type: ignore
+from matplotlib import pyplot as plt # type: ignore
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Set
 
 
 @dataclass
 class PythonSourceFile:
+    basename: str
     path: str
     package_name: Union[str, None]
+    function_names: Set[str]
+    import_paths: Set[str]
+
+psf = PythonSourceFile("","",None,set(),set())
+
 
 def package_name_to_path(package_name, filepath):
     """
@@ -39,8 +45,8 @@ def package_name_to_path(package_name, filepath):
         return spec.origin
     else:
         # Try a local resolve based on filepath:
-        package_name = package_name.replace(".","./")
-        package_path = Path(filepath).parent / Path(package_name)
+        package_name: str = package_name.replace(".","./")
+        package_path: Path = Path(filepath).parent / Path(package_name)
         if package_path.exists():
             if package_path.is_dir():
                 return package_path / Path("__init__.py")
