@@ -9,10 +9,10 @@ To test this, we'll try to analyse scikit learn
 import ast
 import importlib.util
 from pathlib import Path
-import os
 import networkx as nx # type: ignore
+from pyvis.network import Network # type: ignore
 from matplotlib import pyplot as plt # type: ignore
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Union, Set, List, Dict, Optional, Any
 import random
 import string
@@ -20,6 +20,19 @@ import string
 def random_string(l=12):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for _ in range(l))
+
+def networkx_to_pyvis(G: nx.Graph, width="1000px", height="600px"):
+    pyvis_graph = Network(height, width)
+    
+    for node,node_attrs in G.nodes(data=True):
+        pyvis_graph.add_node(str(node),**node_attrs)
+        
+    for source,target,edge_attrs in G.edges(data=True):
+        if not 'value' in edge_attrs and not 'width' in edge_attrs and 'weight' in edge_attrs:
+            edge_attrs['value'] = edge_attrs['weight']
+        pyvis_graph.add_edge(str(source),str(target),**edge_attrs)
+
+    return pyvis_graph
 
 def package_name_to_path(package_name: str, filepath: str) -> Optional[str]:
     """
@@ -120,7 +133,7 @@ class PythonSourceFile:
     import_paths: Set[Union[UniqueIdentifier, str]] = set()
 
     # Static field containing all PythonSourceFile instances
-    instances: Dict[str, Any] = {}
+    instances: Dict[Union[UniqueIdentifier, str], Any] = {}
 
     error_messages: List[str] = []
 
@@ -157,30 +170,30 @@ class PythonSourceFile:
             if p is None:
                 # Give up: we cannot resolve this. We still log it.
                 # But only if we're sure this was not already imported (there is an import with the same basename)
-                psf = None
-                for i in PythonSourceFile.instances:
-                    if PythonSourceFile.instances[i].basename == importName:
-                        psf = PythonSourceFile.instances[i]
+                new_psf = None
+                for inst_id in PythonSourceFile.instances:
+                    if PythonSourceFile.instances[inst_id].basename == importName:
+                        new_psf = PythonSourceFile.instances[inst_id]
                         break
-                if psf is None:
-                    psf = PythonSourceFile(None, False)
-                psf.basename = importName
-                self.import_paths.add(psf.unique_name)
+                if new_psf is None:
+                    new_psf = PythonSourceFile(None, False)
+                new_psf.basename = importName
+                self.import_paths.add(new_psf.unique_name)
                 return
 
         if not exhaustiveResolution:
             if "lib" in p and "site-packages" not in p:
                 # Don't resolve native dependencies to avoid noise in graph
                 # We create the PythonSourceObject, with without parsing
-                psf = PythonSourceFile(p, False)
-                psf.basename = importName
-                self.import_paths.add(psf.unique_name)
+                new_psf = PythonSourceFile(p, False)
+                new_psf.basename = importName
+                self.import_paths.add(new_psf.unique_name)
                 return
 
-        psf = PythonSourceFile(p)
-        self.import_paths.add(psf.unique_name)
+        new_psf = PythonSourceFile(p)
+        self.import_paths.add(new_psf.unique_name)
 
-    def exploreTree(self, s: ast.AST, namespace="", importResolution = True):
+    def exploreTree(self, s: Union[ast.AST,Optional[ast.expr]], namespace: Optional[str] = "", importResolution = True):
         """
             Recursive depth-first explorer of the abstract syntax tree.
         """
@@ -247,27 +260,27 @@ class PythonSourceFile:
             self.exploreTree(s.left, None)
             self.exploreTree(s.right, None)
         elif isinstance(s, ast.BoolOp):
-            for i in s.values:
-                self.exploreTree(i, None)
+            for vals in s.values:
+                self.exploreTree(vals, None)
         elif isinstance(s, ast.JoinedStr):
-            for i in s.values:
-                self.exploreTree(i, None)
+            for v in s.values:
+                self.exploreTree(v, None)
         elif isinstance(s, ast.Compare): # "s" not in stuff
             self.exploreTree(s.left, None)
-            for i in s.comparators:
-                self.exploreTree(i, None)
+            for v2 in s.comparators:
+                self.exploreTree(v2, None)
         elif isinstance(s, ast.Yield):
             self.exploreTree(s.value, None)
         elif isinstance(s, ast.Raise):
             self.exploreTree(s.exc, None)
         elif isinstance(s, ast.List) or isinstance(s, ast.Tuple):
-            for i in s.elts:
-                self.exploreTree(i, None)
+            for v3 in s.elts:
+                self.exploreTree(v3, None)
         elif isinstance(s, ast.Dict):
-            for i in s.keys:
-                self.exploreTree(i, None)
-            for i in s.values:
-                self.exploreTree(i, None)
+            for v4 in s.keys:
+                self.exploreTree(v4, None)
+            for v5 in s.values:
+                self.exploreTree(v5, None)
         elif isinstance(s, ast.Constant):
             pass
         elif isinstance(s, ast.Delete):
@@ -277,8 +290,8 @@ class PythonSourceFile:
         elif isinstance(s, ast.Name):
             pass # variable outside class
         elif isinstance(s, ast.Call): # A function call!
-            for i in s.args:
-                self.exploreTree(i, None)
+            for v6 in s.args:
+                self.exploreTree(v6, None)
         else:
             # Ignore these, they do not contain nested statements
             pass
@@ -341,22 +354,30 @@ class PythonSourceFile:
         if fn_name in self.function_names:
             return self
         else:
-            for i in self.import_paths:
-                resolved = self.import_paths[i].resolveFunctionCall(fn_name)
+            for p in self.import_paths:
+                resolved = p.resolveFunctionCall(fn_name)
                 if resolved is not None:
                     return resolved
         return None
 
-if __name__ == "__main__":
-    path = "toy_project/__main__.py"
-    psf = PythonSourceFile(path=path)
-    
+def display_import_graph(psf: PythonSourceFile):
+    """
+        Display the import graph with a matplotlib backend.
+        It's kind of ugly, so i'd recommend using the pyvis backend.
+    """
     G = psf.to_directed_graph()
-    pos = nx.spring_layout(G, k=0.3, iterations=100)
-
     labeldict = {}
-    for i in PythonSourceFile.instances:
-        labeldict[i] = PythonSourceFile.instances[i].basename
+    for inst_id in PythonSourceFile.instances:
+        labeldict[inst_id] = PythonSourceFile.instances[inst_id].basename
 
-    nx.draw(G, pos, labels=labeldict, with_labels = True)
+    nx.draw(G, labels=labeldict, with_labels = True)
     plt.show()
+
+if __name__ == "__main__":
+    root_path = "toy_project/__main__.py"
+    root_file = PythonSourceFile(path=root_path)
+    
+    graph = root_file.to_directed_graph()
+
+    net = networkx_to_pyvis(graph, "1000px","600px")
+    net.show('nodes.html')
