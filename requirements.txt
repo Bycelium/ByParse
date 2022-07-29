@@ -1,0 +1,5 @@
+# These are needed for the examples and visualizations to work.
+# There are no actual dependencies
+numpy
+networkx
+matplotlib
