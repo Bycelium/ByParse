@@ -3,7 +3,7 @@ from pyvis.network import Network  # type: ignore
 
 
 def networkx_to_pyvis(graph: nx.Graph, width="1000px", height="600px") -> Network:
-    pyvis_graph = Network(height, width)
+    pyvis_graph = Network(height, width, directed=True)
 
     for node, node_attrs in graph.nodes(data=True):
         pyvis_graph.add_node(str(node), **node_attrs)
