@@ -1,44 +1,9 @@
-"""
-
-Read a python package and generate a call graph from it.
-
-To test this, we'll try to analyse scikit learn
-
-"""
-
 import ast
-import importlib.util
+from typing import Optional, Union, Set, Dict, List, Any
 from pathlib import Path
-import networkx as nx  # type: ignore
-from pyvis.network import Network  # type: ignore
-from matplotlib import pyplot as plt  # type: ignore
-from dataclasses import dataclass
-from typing import Union, Set, List, Dict, Optional, Any
-import random
-import string
+import importlib.util
 
-
-def random_string(l=12):
-    letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for _ in range(l))
-
-
-def networkx_to_pyvis(G: nx.Graph, width="1000px", height="600px"):
-    pyvis_graph = Network(height, width)
-
-    for node, node_attrs in G.nodes(data=True):
-        pyvis_graph.add_node(str(node), **node_attrs)
-
-    for source, target, edge_attrs in G.edges(data=True):
-        if (
-            not "value" in edge_attrs
-            and not "width" in edge_attrs
-            and "weight" in edge_attrs
-        ):
-            edge_attrs["value"] = edge_attrs["weight"]
-        pyvis_graph.add_edge(str(source), str(target), **edge_attrs)
-
-    return pyvis_graph
+from byparse.identifiers import UniqueIdentifier, random_string
 
 
 def package_name_to_path(package_name: str, filepath: str) -> Optional[str]:
@@ -74,57 +39,6 @@ def package_name_to_path(package_name: str, filepath: str) -> Optional[str]:
     return None  # Unable to resolve the package
 
 
-def test_package_name_to_path():
-    """
-    Usage example for package_name_to_path.
-    Executable using `pytest to_graph.py -s`
-    """
-    numpy = package_name_to_path("numpy", ".")
-    assert numpy.endswith(str(Path("lib/site-packages/numpy/__init__.py")))
-
-    utils = package_name_to_path("utils", "./toy_project/__main__.py")
-    assert utils.endswith(str(Path("utils/__init__.py")))
-
-    pyplot = package_name_to_path("matplotlib.pyplot", ".")
-    assert pyplot.endswith(str(Path("lib/site-packages/matplotlib/pyplot.py")))
-
-    doesnotexist = package_name_to_path("doesnotexist", "./toy_project/__main__.py")
-    assert doesnotexist is None
-
-
-@dataclass
-class FileLocation:
-    """
-    Represents a specific place inside a file
-    """
-
-    path: str
-    lint: int
-
-
-@dataclass
-class UniqueIdentifier:
-    """
-    A wrapper around a string. Used to indicate that 2 strings are in the same
-    context. Used more as a type hint than an actual class.
-    """
-
-    v: str
-
-
-@dataclass
-class PythonFunctionDefinition:
-    """
-    Represents a definition of a python function
-    """
-
-    name: str
-    arguments: List[str]
-    path: str  # The file where the function was defined
-    line: int
-    callingSites: Set[FileLocation]
-
-
 class PythonSourceFile:
     """
     Represents a piece of python code.
@@ -152,6 +66,41 @@ class PythonSourceFile:
     import_paths: Set[Union[UniqueIdentifier, str]] = set()
     instances: Dict[Union[UniqueIdentifier, str], Any] = {}
     error_messages: List[str] = []
+
+    def __init__(self, path, parsing=True):
+        self.path = path
+        self.import_paths = set()
+        self.function_names = set()
+        self.error_messages = []
+
+        if self.path is not None:
+            self.basename = Path(path).name
+            self.unique_name = path
+        else:
+            self.unique_name = random_string()
+        PythonSourceFile.instances[self.unique_name] = self
+
+        # Perform AST based discovery.
+        if self.path is not None and parsing:
+            if not self.path.endswith(".py"):
+                self.error_messages.append(
+                    f"Unable to parse a non-python source file: {path}"
+                )
+                return
+            filecontent = ""
+            try:
+                filecontent = open(self.path, "r", encoding="utf8").read()
+            except OSError as err:
+                self.error_messages.append(
+                    f"Unable to read file at: {path}.\nError: {err}"
+                )
+                return
+
+            try:
+                s = ast.parse(source=filecontent, filename=self.path)
+                self.explore_tree(s)
+            except SyntaxError as err:
+                self.error_messages.append(f"Syntax error inside the file: {err}")
 
     def resolve_import(self, import_name: str, exhaustive_resolution=False):
         """Resolve an import based on import_name.
@@ -315,62 +264,6 @@ class PythonSourceFile:
             # print(ast.dump(s))
             # print("-----")
 
-    def to_directed_graph(self) -> nx.DiGraph:
-        G = nx.DiGraph()
-        # Simple BFS algorithm with a set to avoid infinite loops.
-        visit_stack = [self]
-        visited = set()
-
-        while len(visit_stack) > 0:
-            node = visit_stack.pop()
-            if node in visited:
-                continue
-            visited.add(node)
-            G.add_node(node.unique_name)
-            for i in node.import_paths:
-                inst = PythonSourceFile.instances[i]
-                visit_stack.append(inst)
-                if not G.has_node(inst.unique_name):
-                    G.add_node(inst.unique_name)
-                G.add_edge(node.unique_name, inst.unique_name)
-
-        return G
-
-    def __init__(self, path, parsing=True):
-        self.path = path
-        self.import_paths = set()
-        self.function_names = set()
-        self.error_messages = []
-
-        if self.path is not None:
-            self.basename = Path(path).name
-            self.unique_name = path
-        else:
-            self.unique_name = random_string()
-        PythonSourceFile.instances[self.unique_name] = self
-
-        # Perform AST based discovery.
-        if self.path is not None and parsing:
-            if not self.path.endswith(".py"):
-                self.error_messages.append(
-                    f"Unable to parse a non-python source file: {path}"
-                )
-                return
-            filecontent = ""
-            try:
-                filecontent = open(self.path, "r", encoding="utf8").read()
-            except OSError as err:
-                self.error_messages.append(
-                    f"Unable to read file at: {path}.\nError: {err}"
-                )
-                return
-
-            try:
-                s = ast.parse(source=filecontent, filename=self.path)
-                self.explore_tree(s)
-            except SyntaxError as err:
-                self.error_messages.append(f"Syntax error inside the file: {err}")
-
     def resolve_function_call(self, fn_name):
         if fn_name in self.function_names:
             return self
@@ -380,27 +273,3 @@ class PythonSourceFile:
                 if resolved is not None:
                     return resolved
         return None
-
-
-def display_import_graph(psf: PythonSourceFile):
-    """
-    Display the import graph with a matplotlib backend.
-    It's kind of ugly, so i'd recommend using the pyvis backend.
-    """
-    G = psf.to_directed_graph()
-    labeldict = {}
-    for inst_id in PythonSourceFile.instances:
-        labeldict[inst_id] = PythonSourceFile.instances[inst_id].basename
-
-    nx.draw(G, labels=labeldict, with_labels=True)
-    plt.show()
-
-
-if __name__ == "__main__":
-    root_path = "toy_project/__main__.py"
-    root_file = PythonSourceFile(path=root_path)
-
-    graph = root_file.to_directed_graph()
-
-    net = networkx_to_pyvis(graph, "1000px", "600px")
-    net.show("nodes.html")
