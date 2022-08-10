@@ -2,7 +2,7 @@ import networkx as nx
 from pyvis.network import Network  # type: ignore
 
 
-def networkx_to_pyvis(graph: nx.Graph, width="1000px", height="600px") -> Network:
+def networkx_to_pyvis(graph: nx.Graph, width="1920px", height="1080px") -> Network:
     pyvis_graph = Network(height, width, directed=True)
 
     for node, node_attrs in graph.nodes(data=True):

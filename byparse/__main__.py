@@ -11,5 +11,5 @@ if __name__ == "__main__":
 
     graph = to_directed_graph(root_file)
 
-    net = networkx_to_pyvis(graph, "1000px", "600px")
+    net = networkx_to_pyvis(graph)
     net.show("nodes.html")
