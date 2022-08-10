@@ -7,12 +7,26 @@ import ast
 from byparse.utils import pretty_path_name
 
 
+class FunctionAst:
+    name: str
+
+    module: "ModuleAst"
+    calls: List[ast.Call]
+
+    def __init__(self, module: "ModuleAst", func_def: ast.FunctionDef) -> None:
+        self.module = module
+        self.name = func_def.name
+        self.args = func_def.args
+        self.decorator_list = func_def.decorator_list
+        self.returns = func_def.returns
+
+
 class ModuleAst:
     root: Path
     path: Path
     source: str
     imports: List[Union[ast.Import, ast.ImportFrom]]
-    functions: List[Union[ast.FunctionDef, ast.AsyncFunctionDef]]
+    functions: List[FunctionAst]
     classes: List[ast.ClassDef]
 
     def __init__(self, path: Union[str, Path], root: Union[str, Path]):
@@ -39,7 +53,10 @@ class ModuleAst:
             )
 
         self.imports = filter_instances(ast.Import, ast.ImportFrom)
-        self.functions = filter_instances(ast.FunctionDef, ast.AsyncFunctionDef)
+        self.functions = [
+            FunctionAst(self, func_def)
+            for func_def in filter_instances(ast.FunctionDef, ast.AsyncFunctionDef)
+        ]
         self.classes = filter_instances(ast.ClassDef)
         self.imperative = [
             x

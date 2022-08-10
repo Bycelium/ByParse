@@ -7,4 +7,5 @@ if __name__ == "__main__":
     module_asts = parse_project(project_root)
     graph = build_project_graph(module_asts)
     net = networkx_to_pyvis(graph)
+    net.toggle_physics(True)
     net.show("nodes.html")
