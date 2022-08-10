@@ -15,12 +15,12 @@ def to_directed_graph(psf: PythonSourceFile) -> nx.DiGraph:
         if node in visited:
             continue
         visited.add(node)
-        G.add_node(node.unique_name)
+        G.add_node(node.unique_name, label=node.basename)
         for i in node.import_paths:
             inst: PythonSourceFile = PythonSourceFile.instances[i]
             visit_stack.append(inst)
             if not G.has_node(inst.unique_name):
-                G.add_node(inst.unique_name)
+                G.add_node(inst.unique_name, label=inst.basename)
             G.add_edge(inst.unique_name, node.unique_name)
 
     return G
