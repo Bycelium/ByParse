@@ -7,7 +7,6 @@ import importlib.machinery
 
 from byparse.identifiers import UniqueIdentifier
 from byparse.ast_crawl import explore_tree
-from byparse.utils import try_open_python_file
 
 
 def relative_resolution(pseudo_path: str, relative_to: str) -> Optional[str]:
@@ -51,7 +50,7 @@ def find_relative_path(
     if package_path is not None:
         return package_path
 
-    # In case we resolve based on the current working directory, 
+    # In case we resolve based on the current working directory,
     # we introduce a fake file to preserve the relative structure of the directories.
     package_path = relative_resolution(pseudo_path, user_cwd + "/__init__.py")
     if package_path is not None:
@@ -136,11 +135,12 @@ class PythonSourceFile:
 
         # Perform AST based discovery.
         if self.filepath is not None and parsing:
-            filecontent = try_open_python_file(self.filepath)
+            with open(self.filepath, "r", encoding="utf8") as file:
+                file_src = file.read()
             try:
                 explore_tree(
                     self,
-                    ast.parse(source=filecontent, filename=self.filepath.name),
+                    ast.parse(source=file_src, filename=self.filepath.name),
                 )
             except SyntaxError as err:
                 raise SyntaxError(f"Syntax error inside the file: {filepath}") from err

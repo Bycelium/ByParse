@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Union, Optional
 
 import ast
-from byparse.utils import try_open_python_file
 
 if TYPE_CHECKING:
     from byparse.py_src_file import PythonSourceFile
@@ -113,15 +112,16 @@ def explore_tree(
         pass
 
 
-def parse_ast_module(filepath: Path) -> Dict[str, List[ast.AST]]:
-    file_content = try_open_python_file(filepath)
-    file_elements = ast.parse(source=file_content, filename=filepath.name)
+def parse_ast_module(source: str, filename: str) -> Dict[str, List[ast.AST]]:
+    module_ast = ast.parse(source=source, filename=filename)
+
+    assert isinstance(module_ast, ast.Module)
 
     def filter_instances(*types):
         return list(
             filter(
                 lambda x: isinstance(x, types),
-                file_elements.body,
+                module_ast.body,
             )
         )
 
@@ -132,7 +132,7 @@ def parse_ast_module(filepath: Path) -> Dict[str, List[ast.AST]]:
     }
     ast_filtered["imperative"] = [
         x
-        for x in file_elements.body
+        for x in module_ast.body
         if x
         not in ast_filtered["imports"]
         + ast_filtered["functions"]
@@ -149,7 +149,11 @@ def parse_project(project_path: str) -> Dict[Path, Dict[str, List[ast.AST]]]:
         for filename in filenames:
             if filename.endswith(".py"):
                 filepath = Path(dirpath) / Path(filename)
-                file_ast_elements[filepath] = parse_ast_module(filepath)
+
+                with open(filepath, "r", encoding="utf8") as file:
+                    file_src = file.read()
+
+                file_ast_elements[filepath] = parse_ast_module(file_src, filepath.name)
     return file_ast_elements
 
 
