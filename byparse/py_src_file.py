@@ -187,9 +187,7 @@ class PythonSourceFile:
                 parsing = False
 
         elif not exhaustive_resolution:
-            if "built-in" in package_path or (
-                "lib" in package_path and "site-packages" not in package_path
-            ):
+            if "built-in" in package_path or "lib" in package_path:
                 # Don't resolve native dependencies to avoid noise in graph
                 # We create the PythonSourceObject, with without parsing
                 parsing = False
