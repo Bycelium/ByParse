@@ -1,11 +1,8 @@
-from dataclasses import dataclass
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Union, Optional
+from typing import TYPE_CHECKING, List, Union, Optional
 
 import ast
-
-from byparse.resolve_import import resolve_import_ast_paths
 
 if TYPE_CHECKING:
     from byparse.py_src_file import PythonSourceFile
