@@ -11,20 +11,24 @@ def resolve_import_ast_paths(
 ) -> Dict[ast.alias, Path]:
     alias_paths = {}
     for alias in import_ast.names:
-        alias_paths[alias] = _resolve_import_ast_alias_path(
-            import_ast, alias, project_root
-        )
+        module = None
+        if isinstance(import_ast, ast.ImportFrom):
+            module = import_ast.module
+        alias_paths[alias] = {
+            "path": resolve_import_ast_alias_path(alias, project_root, module),
+            "module": module,
+        }
     return alias_paths
 
 
-def _resolve_import_ast_alias_path(
-    import_ast: Union[ast.Import, ast.ImportFrom],
+def resolve_import_ast_alias_path(
     alias: ast.alias,
     project_root: str,
+    module: Optional[str] = None,  # Not none only if ast.ImportFrom
 ) -> Path:
 
-    if isinstance(import_ast, ast.ImportFrom):
-        full_chain = ".".join((import_ast.module, alias.name))
+    if module is not None:
+        full_chain = ".".join((module, alias.name))
 
         # For modules and subpackage
         path = _relative_resolution(full_chain, project_root)
@@ -32,20 +36,20 @@ def _resolve_import_ast_alias_path(
             return path
 
         # For functions, classes or global variables imported from module or subpackage
-        path = _relative_resolution(import_ast.module, project_root)
+        path = _relative_resolution(module, project_root)
         if path is not None:
             return path
 
-    elif isinstance(import_ast, ast.Import):
+    else:
         # For modules and subpackage
         path = _relative_resolution(alias.name, project_root)
         if path is not None:
             return path
-    else:
-        raise TypeError(f"Given ast is not an import but {type(import_ast)}.")
 
     # For installed packages
     spec = find_spec(alias.name)
+    if spec is None:
+        raise ModuleNotFoundError(f"Could not find module {alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
         return Path(f"built-in/{alias.name}")
     return Path(spec.origin)

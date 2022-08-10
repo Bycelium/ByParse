@@ -7,7 +7,7 @@ def networkx_to_pyvis(graph: nx.Graph, width="1920px", height="1080px") -> Netwo
 
     for node, node_attrs in graph.nodes(data=True):
         label = node_attrs.pop("label", str(node))
-        node_attrs.pop("ast")
+        node_attrs.pop("ast", None)
         pyvis_graph.add_node(str(node), label=label, **node_attrs)
 
     for source, target, edge_attrs in graph.edges(data=True):
