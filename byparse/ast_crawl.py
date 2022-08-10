@@ -1,4 +1,4 @@
-from functools import partial
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Union, Optional
 
@@ -115,24 +115,69 @@ def explore_tree(
 
 def parse_ast_module(filepath: Path) -> Dict[str, List[ast.AST]]:
     file_content = try_open_python_file(filepath)
-    fileelement = ast.parse(source=file_content, filename=filepath.name)
+    file_elements = ast.parse(source=file_content, filename=filepath.name)
 
     def filter_instances(*types):
         return list(
             filter(
                 lambda x: isinstance(x, types),
-                fileelement.body,
+                file_elements.body,
             )
         )
 
-    return {
+    ast_filtered = {
         "imports": filter_instances(ast.Import, ast.ImportFrom),
         "functions": filter_instances(ast.FunctionDef, ast.AsyncFunctionDef),
         "classes": filter_instances(ast.ClassDef),
     }
+    ast_filtered["imperative"] = [
+        x
+        for x in file_elements.body
+        if x
+        not in ast_filtered["imports"]
+        + ast_filtered["functions"]
+        + ast_filtered["classes"]
+    ]
+
+    return ast_filtered
+
+
+def parse_project(project_path: str) -> Dict[Path, Dict[str, List[ast.AST]]]:
+    project_paths = os.walk(project_path)
+    file_ast_elements = {}
+    for dirpath, _, filenames in project_paths:
+        for filename in filenames:
+            if filename.endswith(".py"):
+                filepath = Path(dirpath) / Path(filename)
+                file_ast_elements[filepath] = parse_ast_module(filepath)
+    return file_ast_elements
+
+
+def pretty_print_ast_elements(file_ast_elements: Dict[Path, Dict[str, List[ast.AST]]]):
+    for filepath, ast_elements in file_ast_elements.items():
+        print(filepath)
+        ast_elements_to_print = {k: v for k, v in ast_elements.items() if v}
+        for i, (key, values) in enumerate(ast_elements_to_print.items()):
+            prefix = "├" if i < len(ast_elements_to_print) - 1 else "└"
+            print_values = str(len(values))
+            if key == "functions":
+                print_values = [val.name for val in values]
+            if key == "imports":
+                print_values = []
+                for val in values:
+                    if isinstance(val, ast.Import):
+                        print_values += [alias.name for alias in val.names]
+                    if isinstance(val, ast.ImportFrom):
+                        print_values += [
+                            ".".join((val.module, alias.name)) for alias in val.names
+                        ]
+            print(prefix, key, print_values)
+
+
+def main():
+    file_ast_elements = parse_project("toy_project")
+    pretty_print_ast_elements(file_ast_elements)
 
 
 if __name__ == "__main__":
-    path = Path("tests/integration/toy_project/package/__main__.py")
-    for key, value in parse_ast_module(path).items():
-        print(key, value)
+    main()

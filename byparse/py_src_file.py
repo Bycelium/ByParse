@@ -51,8 +51,8 @@ def find_relative_path(
     if package_path is not None:
         return package_path
 
-    # In case we resolve based on the current working directory, we introduce a fake file to preserve the relative structure
-    # of the directories.
+    # In case we resolve based on the current working directory, 
+    # we introduce a fake file to preserve the relative structure of the directories.
     package_path = relative_resolution(pseudo_path, user_cwd + "/__init__.py")
     if package_path is not None:
         return package_path
