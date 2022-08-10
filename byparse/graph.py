@@ -1,16 +1,14 @@
 import ast
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import networkx as nx
-import matplotlib.pyplot as plt
 
 from byparse.ast_crawl import ModuleAst, ast_call_name
 from byparse.resolve_import import (
     resolve_import_ast_alias_path,
     resolve_import_ast_paths,
 )
-from byparse.utils import pretty_path_name
 
 
 def build_project_graph(module_asts: List[ModuleAst]) -> nx.DiGraph:
@@ -58,25 +56,4 @@ def build_project_graph(module_asts: List[ModuleAst]) -> nx.DiGraph:
                     call_path = ">".join((str(call_true_path), call_source))
                     graph.add_edge(call_path, func_path)
 
-        # print(module_ast.path, aliase_paths)
-
-        # for alias, path in aliase_paths.items():
-        #     alias_name = alias.asname if alias.asname is not None else alias.name
-        #     print(module_ast.path, alias_name, path)
-        # if path in graph.nodes():
-        #     target_ast: Optional[ModuleAst] = graph.nodes[path]["ast"]
-        #     if target_ast is not None:
-        #         for callimp in callimps:
-        #             call_name = ast_call_name(callimp)
-        #             aliasas = call_name.split(".")[0]
-        #             graph.add_edge(, func_path)
-        #         fnames = [astf.name for astf in target_ast.functions]
-        #         cnames = [astc.name for astc in target_ast.classes]
-        #         if alias.name in fnames + cnames:
-        #             func_path = "/".join((str(path), alias.name))
-        #             graph.add_edge(func_path, module_ast.path)
-        #             continue
-        # else:
-        #     graph.add_node(path, label=pretty_path_name(path), ast=None)
-        # graph.add_edge(path, module_ast.path)
     return graph
