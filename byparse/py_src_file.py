@@ -6,6 +6,8 @@ import importlib.util
 import importlib.machinery
 
 from byparse.identifiers import UniqueIdentifier
+from byparse.ast_crawl import explore_tree
+from byparse.utils import try_open_python_file
 
 
 def relative_resolution(pseudo_path: str, relative_to: str) -> Optional[str]:
@@ -120,7 +122,7 @@ class PythonSourceFile:
     error_messages: List[str] = []
 
     def __init__(self, filepath: str, user_cwd: str = ".", parsing: bool = True):
-        self.filepath = filepath
+        self.filepath = Path(filepath)
         self.user_cwd = user_cwd
         self.import_paths = set()
         self.function_names = set()
@@ -128,31 +130,20 @@ class PythonSourceFile:
 
         assert self.filepath is not None
 
-        self.basename = Path(filepath).name
+        self.basename = self.filepath.name
         self.unique_name = filepath
         PythonSourceFile.instances[self.unique_name] = self
 
         # Perform AST based discovery.
         if self.filepath is not None and parsing:
-            if not self.filepath.endswith(".py"):
-                self.error_messages.append(
-                    f"Unable to parse a non-python source file: {filepath}"
-                )
-                return
-            filecontent = ""
+            filecontent = try_open_python_file(self.filepath)
             try:
-                filecontent = open(self.filepath, "r", encoding="utf8").read()
-            except OSError as err:
-                self.error_messages.append(
-                    f"Unable to read file at: {filepath}.\nError: {err}"
+                explore_tree(
+                    self,
+                    ast.parse(source=filecontent, filename=self.filepath.name),
                 )
-                return
-
-            try:
-                s = ast.parse(source=filecontent, filename=self.filepath)
-                self.explore_tree(s)
             except SyntaxError as err:
-                self.error_messages.append(f"Syntax error inside the file: {err}")
+                raise SyntaxError(f"Syntax error inside the file: {filepath}") from err
 
     def resolve_import(self, import_name: str, exhaustive_resolution=False):
         """Resolve an import based on import_name.
@@ -182,7 +173,6 @@ class PythonSourceFile:
                     break
 
             if new_psf is None:
-                # raise ValueError(f"Could not resolve import {import_name}")
                 package_path = import_name
                 parsing = False
 
@@ -197,109 +187,6 @@ class PythonSourceFile:
 
         new_psf.basename = import_name
         self.import_paths.add(new_psf.unique_name)
-
-    def explore_tree(
-        self,
-        s: Union[ast.AST, Optional[ast.expr]],
-        namespace: Optional[str] = "",
-        import_resolution=True,
-    ) -> None:
-        """Recursive depth-first explorer of the abstract syntax tree.
-
-        Args:
-            s (Union[ast.AST, Optional[ast.expr]]): #TODO
-            namespace (Optional[str]): #TODO
-            import_resolution (bool): #TODO
-
-        """
-        if s is None:
-            return
-        # Enumerate the types we can encounter
-        if isinstance(
-            s, (ast.Module, ast.If, ast.For, ast.While, ast.With, ast.ExceptHandler)
-        ):
-            for i in s.body:
-                self.explore_tree(i, namespace)
-        elif isinstance(s, ast.ClassDef):
-            # Ignore args, returns, type_comment and decorator_list
-            if namespace is not None:
-                self.function_names.add(namespace + s.name)
-            for i in s.body:
-                self.explore_tree(i, None)
-        elif isinstance(s, ast.FunctionDef):
-            if namespace is not None:
-                namespace += s.name + "."
-            for i in s.body:
-                self.explore_tree(i, namespace)
-        elif isinstance(s, ast.Try):
-            for i in s.body:
-                self.explore_tree(i, None)
-            for j in s.handlers:
-                self.explore_tree(j, None)
-            for k in s.finalbody:
-                self.explore_tree(k, None)
-        elif isinstance(s, ast.Import) and import_resolution:
-            for name in s.names:
-                self.resolve_import(name.name)
-        elif isinstance(s, ast.ImportFrom) and import_resolution:
-            for name in s.names:
-                module_name = name.name
-                if s.module is not None:
-                    module_name = ".".join((s.module, module_name))
-                self.resolve_import(module_name)
-
-        elif isinstance(s, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.Return):
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.Index):  # stuff inside [] when indexing array
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.FormattedValue):  # stuff inside f-strings
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.Expr):
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.Subscript):
-            self.explore_tree(s.value, None)
-            self.explore_tree(s.slice, None)
-        elif isinstance(s, ast.BinOp):  # 3 + 5
-            self.explore_tree(s.left, None)
-            self.explore_tree(s.right, None)
-        elif isinstance(s, ast.BoolOp):
-            for vals in s.values:
-                self.explore_tree(vals, None)
-        elif isinstance(s, ast.JoinedStr):
-            for v in s.values:
-                self.explore_tree(v, None)
-        elif isinstance(s, ast.Compare):  # "s" not in stuff
-            self.explore_tree(s.left, None)
-            for v2 in s.comparators:
-                self.explore_tree(v2, None)
-        elif isinstance(s, ast.Yield):
-            self.explore_tree(s.value, None)
-        elif isinstance(s, ast.Raise):
-            self.explore_tree(s.exc, None)
-        elif isinstance(s, (ast.List, ast.Tuple)):
-            for v3 in s.elts:
-                self.explore_tree(v3, None)
-        elif isinstance(s, ast.Dict):
-            for v4 in s.keys:
-                self.explore_tree(v4, None)
-            for v5 in s.values:
-                self.explore_tree(v5, None)
-        elif isinstance(s, ast.Constant):
-            pass
-        elif isinstance(s, ast.Delete):
-            pass
-        elif isinstance(s, ast.Attribute):
-            pass  # variable inside class (np.array)
-        elif isinstance(s, ast.Name):
-            pass  # variable outside class
-        elif isinstance(s, ast.Call):  # A function call!
-            for v6 in s.args:
-                self.explore_tree(v6, None)
-        else:
-            # Ignore these, they do not contain nested statements
-            pass
 
     def resolve_function_call(self, fn_name):
         if fn_name in self.function_names:
