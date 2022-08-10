@@ -1,8 +1,11 @@
+from dataclasses import dataclass
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Union, Optional
 
 import ast
+
+from byparse.resolve_import import resolve_import_ast_paths
 
 if TYPE_CHECKING:
     from byparse.py_src_file import PythonSourceFile
@@ -112,76 +115,81 @@ def explore_tree(
         pass
 
 
-def parse_ast_module(source: str, filename: str) -> Dict[str, List[ast.AST]]:
-    module_ast = ast.parse(source=source, filename=filename)
+class ModuleAst:
+    path: Path
+    source: str
+    imports: List[Union[ast.Import, ast.ImportFrom]]
+    functions: List[Union[ast.FunctionDef, ast.AsyncFunctionDef]]
+    classes: List[ast.ClassDef]
 
-    assert isinstance(module_ast, ast.Module)
+    def __init__(self, path: Union[str, Path]):
+        self.path = Path(path)
 
-    def filter_instances(*types):
-        return list(
-            filter(
-                lambda x: isinstance(x, types),
-                module_ast.body,
+        with open(self.path, "r", encoding="utf8") as file:
+            self.source = file.read()
+
+        self.parse_ast_module()
+
+    def parse_ast_module(self):
+        module_ast = ast.parse(source=self.source, filename=self.path.name)
+
+        assert isinstance(module_ast, ast.Module)
+
+        def filter_instances(*types):
+            return list(
+                filter(
+                    lambda x: isinstance(x, types),
+                    module_ast.body,
+                )
             )
-        )
 
-    ast_filtered = {
-        "imports": filter_instances(ast.Import, ast.ImportFrom),
-        "functions": filter_instances(ast.FunctionDef, ast.AsyncFunctionDef),
-        "classes": filter_instances(ast.ClassDef),
-    }
-    ast_filtered["imperative"] = [
-        x
-        for x in module_ast.body
-        if x
-        not in ast_filtered["imports"]
-        + ast_filtered["functions"]
-        + ast_filtered["classes"]
-    ]
+        self.imports = filter_instances(ast.Import, ast.ImportFrom)
+        self.functions = filter_instances(ast.FunctionDef, ast.AsyncFunctionDef)
+        self.classes = filter_instances(ast.ClassDef)
+        self.imperative = [
+            x
+            for x in module_ast.body
+            if x not in self.imports + self.functions + self.classes
+        ]
 
-    return ast_filtered
+    def __repr__(self) -> str:
+        ast_elements = ("functions", "classes", "imports", "imperative")
+
+        elements_to_print = []
+        for key in ast_elements:
+            values = getattr(self, key)
+            if values:
+                print_values = str(len(values))
+                if key == "functions":
+                    print_values = str([val.name for val in values])
+                if key == "imports":
+                    print_values = []
+                    for val in values:
+                        if isinstance(val, ast.Import):
+                            print_values += [alias.name for alias in val.names]
+                        if isinstance(val, ast.ImportFrom):
+                            print_values += [
+                                ".".join((val.module, alias.name))
+                                for alias in val.names
+                            ]
+                    print_values = str(print_values)
+                elements_to_print.append(f"{key.capitalize()}({print_values})")
+
+        content = ", ".join(elements_to_print)
+        return f"ModuleAST({self.path}, {content})"
 
 
-def parse_project(project_path: str) -> Dict[Path, Dict[str, List[ast.AST]]]:
+def parse_project(project_path: str) -> List[ModuleAst]:
     project_paths = os.walk(project_path)
-    file_ast_elements = {}
+    modules_asts = []
     for dirpath, _, filenames in project_paths:
         for filename in filenames:
             if filename.endswith(".py"):
                 filepath = Path(dirpath) / Path(filename)
-
-                with open(filepath, "r", encoding="utf8") as file:
-                    file_src = file.read()
-
-                file_ast_elements[filepath] = parse_ast_module(file_src, filepath.name)
-    return file_ast_elements
+                modules_asts.append(ModuleAst(filepath))
+    return modules_asts
 
 
-def pretty_print_ast_elements(file_ast_elements: Dict[Path, Dict[str, List[ast.AST]]]):
-    for filepath, ast_elements in file_ast_elements.items():
-        print(filepath)
-        ast_elements_to_print = {k: v for k, v in ast_elements.items() if v}
-        for i, (key, values) in enumerate(ast_elements_to_print.items()):
-            prefix = "├" if i < len(ast_elements_to_print) - 1 else "└"
-            print_values = str(len(values))
-            if key == "functions":
-                print_values = [val.name for val in values]
-            if key == "imports":
-                print_values = []
-                for val in values:
-                    if isinstance(val, ast.Import):
-                        print_values += [alias.name for alias in val.names]
-                    if isinstance(val, ast.ImportFrom):
-                        print_values += [
-                            ".".join((val.module, alias.name)) for alias in val.names
-                        ]
-            print(prefix, key, print_values)
-
-
-def main():
-    file_ast_elements = parse_project("toy_project")
-    pretty_print_ast_elements(file_ast_elements)
-
-
-if __name__ == "__main__":
-    main()
+def pretty_print_ast_elements(modules_asts: List[ModuleAst]):
+    for modules_ast in modules_asts:
+        print(repr(modules_ast))
