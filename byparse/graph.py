@@ -11,7 +11,10 @@ from byparse.resolve_import import (
 )
 
 
-def build_project_graph(module_asts: List[ModuleCrawler]) -> nx.DiGraph:
+def build_project_graph(
+    module_asts: List[ModuleCrawler],
+    with_deps="group",
+) -> nx.DiGraph:
     graph = nx.DiGraph()
 
     def link_path_to_name(path: Path, name: str):
@@ -69,7 +72,23 @@ def build_project_graph(module_asts: List[ModuleCrawler]) -> nx.DiGraph:
                         import_alias, module_ast.root, module=module
                     )
 
-                call_path = link_path_to_name(call_true_path, call_source)
+                if "lib" in call_true_path.parts:
+                    if not with_deps:
+                        continue
+                    if (
+                        "__init__.py" in call_true_path.parts
+                        or "__main__.py" in call_true_path.parts
+                    ):
+                        call_true_path = call_true_path.parent
+                    call_true_path = call_true_path.parts[-1]
+                    call_true_path = call_true_path.split(".py")[0]
+                    if with_deps == "group":
+                        call_path = call_true_path
+                    else:
+                        call_path = link_path_to_name(call_true_path, call_source)
+                else:
+                    call_path = link_path_to_name(call_true_path, call_source)
+
                 if "sbs2" in str(call_source):
                     print(
                         module_ast.path,

@@ -67,9 +67,9 @@ def resolve_import_ast_alias_path(
     spec = find_spec(alias.name)
     if spec is None:
         warn(f"Could not find module {alias.name}")
-        return Path(f"not-found/{alias.name}")
+        return Path(f"lib/not-found/{alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
-        return Path(f"built-in/{alias.name}")
+        return Path(f"lib/built-in/{alias.name}")
     return Path(spec.origin)
 
 
