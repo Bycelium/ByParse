@@ -7,37 +7,41 @@ import ast
 from byparse.utils import pretty_path_name
 
 
-class ModuleAst:
-    root: Path
-    path: Path
-    source: str
+class AstContextCrawler:
+
+    functions: Dict[ast.FunctionDef, "AstContextCrawler"]
+    classes: Dict[ast.ClassDef, "AstContextCrawler"]
+
     imports: List[Union[ast.Import, ast.ImportFrom]]
-    functions: Dict[ast.FunctionDef, List[ast.Call]]
-    classes: Dict[ast.ClassDef, List[ast.Call]]
     calls: List[ast.Call]
 
-    def __init__(self, path: Union[str, Path], root: Union[str, Path]):
-        self.root = Path(root)
-        self.path = Path(path)
-        self.name = pretty_path_name(self.path)
-
-        with open(self.path, "r", encoding="utf8") as file:
-            self.source = file.read()
-
-        module_ast = ast.parse(source=self.source, filename=self.path.name)
-        assert isinstance(module_ast, ast.Module)
-
+    def __init__(
+        self, root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
+    ) -> None:
+        self.root_ast = root_ast
         self.imports = []
         self.calls = []
         self.functions = {}
         self.classes = {}
-        # Imports and call used
-        self.crawler_ast(module_ast)
 
-    def crawler_ast(
+        if isinstance(root_ast, ast.Module):
+            self.crawl(root_ast, self)
+        elif isinstance(root_ast, (ast.FunctionDef, ast.ClassDef)):
+            for i in root_ast.body:
+                self.crawl(i, self)
+
+    @property
+    def functions_names(self) -> Dict[str, ast.FunctionDef]:
+        return {func_def.name: func_def for func_def in self.functions}
+
+    @property
+    def classes_names(self) -> Dict[str, ast.FunctionDef]:
+        return {class_def.name: class_def for class_def in self.classes}
+
+    def crawl(
         self,
         ast_element: Union[ast.AST, Optional[ast.expr]],
-        context: Optional[list] = None,
+        context: "AstContextCrawler",
     ) -> None:
         """Recursive depth-first explorer of the abstract syntax tree.
 
@@ -49,27 +53,20 @@ class ModuleAst:
         """
         if ast_element is None:
             return
+
+        context = self if context is None else context
+
         # Enumerate the types we can encounter
         if isinstance(ast_element, (ast.Import, ast.ImportFrom)):
-            if context is not None:
-                context.append(ast_element)
-            else:
-                self.imports.append(ast_element)
+            context.imports.append(ast_element)
         elif isinstance(ast_element, ast.Call):
-            if context is not None:
-                context.append(ast_element)
-            else:
-                self.calls.append(ast_element)
+            context.calls.append(ast_element)
             for v in ast_element.args:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
         elif isinstance(ast_element, ast.FunctionDef):
-            self.functions[ast_element] = []
-            for i in ast_element.body:
-                self.crawler_ast(i, self.functions[ast_element])
+            self.functions[ast_element] = AstContextCrawler(ast_element)
         elif isinstance(ast_element, ast.ClassDef):
-            self.classes[ast_element] = []
-            for i in ast_element.body:
-                self.crawler_ast(i, self.classes[ast_element])
+            self.classes[ast_element] = AstContextCrawler(ast_element)
         elif isinstance(
             ast_element,
             (
@@ -82,15 +79,15 @@ class ModuleAst:
             ),
         ):
             for i in ast_element.body:
-                self.crawler_ast(i, context)
+                self.crawl(i, context)
 
         elif isinstance(ast_element, ast.Try):
             for i in ast_element.body:
-                self.crawler_ast(i, context)
+                self.crawl(i, context)
             for j in ast_element.handlers:
-                self.crawler_ast(j, context)
+                self.crawl(j, context)
             for k in ast_element.finalbody:
-                self.crawler_ast(k, context)
+                self.crawl(k, context)
         elif isinstance(
             ast_element,
             (
@@ -103,32 +100,32 @@ class ModuleAst:
                 ast.Return,
             ),
         ):
-            self.crawler_ast(ast_element.value, context)
+            self.crawl(ast_element.value, context)
         elif isinstance(ast_element, ast.Subscript):
-            self.crawler_ast(ast_element.value, context)
-            self.crawler_ast(ast_element.slice, context)
+            self.crawl(ast_element.value, context)
+            self.crawl(ast_element.slice, context)
         elif isinstance(ast_element, ast.BinOp):  # 3 + 5
-            self.crawler_ast(ast_element.left, context)
-            self.crawler_ast(ast_element.right, context)
+            self.crawl(ast_element.left, context)
+            self.crawl(ast_element.right, context)
         elif isinstance(ast_element, (ast.BoolOp, ast.JoinedStr)):
             for v in ast_element.values:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
         elif isinstance(ast_element, ast.Compare):  # "s" not in stuff
-            self.crawler_ast(ast_element.left, context)
+            self.crawl(ast_element.left, context)
             for v in ast_element.comparators:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
         elif isinstance(ast_element, ast.Yield):
-            self.crawler_ast(ast_element.value, context)
+            self.crawl(ast_element.value, context)
         elif isinstance(ast_element, ast.Raise):
-            self.crawler_ast(ast_element.exc, context)
+            self.crawl(ast_element.exc, context)
         elif isinstance(ast_element, (ast.List, ast.Tuple)):
             for v in ast_element.elts:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
         elif isinstance(ast_element, ast.Dict):
             for v in ast_element.keys:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
             for v in ast_element.values:
-                self.crawler_ast(v, context)
+                self.crawl(v, context)
         elif isinstance(ast_element, ast.Attribute):
             pass  # variable inside class (np.array)
         elif isinstance(ast_element, ast.Name):
@@ -161,17 +158,37 @@ class ModuleAst:
                 elements_to_print.append(f"{key.capitalize()}({print_values})")
 
         content = ", ".join(elements_to_print)
-        return f"ModuleAST({self.path}, {content})"
+        return f"AstContext({content})"
 
 
-def parse_project(project_path: str) -> List[ModuleAst]:
+class ModuleCrawler:
+    root: Path
+    path: Path
+    source: str
+    context: AstContextCrawler
+
+    def __init__(self, path: Union[str, Path], root: Union[str, Path]):
+        self.root = Path(root)
+        self.path = Path(path)
+        self.name = pretty_path_name(self.path)
+
+        with open(self.path, "r", encoding="utf8") as file:
+            self.source = file.read()
+
+        module_ast = ast.parse(source=self.source, filename=self.path.name)
+
+        # Crawl ast
+        self.context = AstContextCrawler(module_ast)
+
+
+def parse_project(project_path: str) -> List[ModuleCrawler]:
     project_paths = os.walk(project_path)
     modules_asts = []
     for dirpath, _, filenames in project_paths:
         for filename in filenames:
             if filename.endswith(".py"):
                 filepath = Path(dirpath) / Path(filename)
-                modules_asts.append(ModuleAst(filepath, root=project_path))
+                modules_asts.append(ModuleCrawler(filepath, root=project_path))
     return modules_asts
 
 

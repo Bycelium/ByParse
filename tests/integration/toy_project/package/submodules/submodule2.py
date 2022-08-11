@@ -5,4 +5,7 @@ import scripts.script2 as s2
 
 
 def sm2():
-    return f"sm2({s2.sc2()})"
+    def get_sm2():
+        return "sm2"
+
+    return f"{get_sm2()}({s2.sc2()})"

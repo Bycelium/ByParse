@@ -1,8 +1,27 @@
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import ast
 from pathlib import Path
 from importlib.util import find_spec
+from warnings import warn
+
+
+def resolve_aliases_paths(
+    imports: List[Union[ast.Import, ast.ImportFrom]],
+    project_root: str,
+) -> Tuple[Dict[ast.alias, Path], Dict[str, ast.alias]]:
+    aliases_paths: Dict[ast.alias, Path] = {}
+    for import_element in imports:
+        aliases_paths.update(
+            resolve_import_ast_paths(import_element, project_root=project_root)
+        )
+
+    used_names: Dict[str, ast.alias] = {}
+    for alias in aliases_paths:
+        used_name = alias.asname if alias.asname is not None else alias.name
+        used_names[used_name] = alias
+
+    return aliases_paths, used_names
 
 
 def resolve_import_ast_paths(
@@ -14,10 +33,8 @@ def resolve_import_ast_paths(
         module = None
         if isinstance(import_ast, ast.ImportFrom):
             module = import_ast.module
-        alias_paths[alias] = {
-            "path": resolve_import_ast_alias_path(alias, project_root, module),
-            "module": module,
-        }
+        path = resolve_import_ast_alias_path(alias, project_root, module)
+        alias_paths[alias] = {"path": path, "module": module}
     return alias_paths
 
 
@@ -49,7 +66,8 @@ def resolve_import_ast_alias_path(
     # For installed packages
     spec = find_spec(alias.name)
     if spec is None:
-        raise ModuleNotFoundError(f"Could not find module {alias.name}")
+        warn(f"Could not find module {alias.name}")
+        return Path(f"not-found/{alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
         return Path(f"built-in/{alias.name}")
     return Path(spec.origin)
