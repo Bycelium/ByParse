@@ -16,6 +16,7 @@ def build_project_graph(
     with_deps="group",
 ) -> nx.DiGraph:
     graph = nx.DiGraph()
+    module_asts_by_path = {module_ast.path: module_ast for module_ast in module_asts}
 
     def link_path_to_name(path: Path, name: str):
         return ">".join((str(path), name))
@@ -72,6 +73,33 @@ def build_project_graph(
                         import_alias, module_ast.root, module=module
                     )
 
+                # Resolve module imported in other module
+                target = module_asts_by_path[call_true_path]
+                target_aliases, target_used_names = resolve_aliases_paths(
+                    target.context.imports, str(target.root)
+                )
+                target_knowed_names = list(
+                    target.context.functions_names.keys()
+                ) + list(target.context.classes_names.keys())
+
+                alias_name = call_import
+
+                while call_source not in target_knowed_names:
+
+                    call_true_path = target_aliases[target_used_names[alias_name]][
+                        "path"
+                    ]
+
+                    target = module_asts_by_path[call_true_path]
+                    target_aliases, target_used_names = resolve_aliases_paths(
+                        target.context.imports, str(target.root)
+                    )
+                    target_knowed_names = list(
+                        target.context.functions_names.keys()
+                    ) + list(target.context.classes_names.keys())
+                    alias_name = call_source
+
+                # Filter libs
                 if "lib" in call_true_path.parts:
                     if not with_deps:
                         continue
@@ -86,16 +114,12 @@ def build_project_graph(
                         call_path = call_true_path
                     else:
                         call_path = link_path_to_name(call_true_path, call_source)
+                    if call_path not in graph.nodes():
+                        graph.add_node(call_path, color="#afaaaf")
                 else:
                     call_path = link_path_to_name(call_true_path, call_source)
 
-                if "sbs2" in str(call_source):
-                    print(
-                        module_ast.path,
-                        call_parts,
-                        call_path,
-                        call_path in graph.nodes(),
-                    )
+                # Finally add the edge
                 graph.add_edge(call_path, edge_endpoint)
 
     # Add nodes
