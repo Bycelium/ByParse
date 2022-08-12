@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import ast
 from pathlib import Path
 from importlib.util import find_spec
-from warnings import warn
+from logging import warn
 
 
 def resolve_aliases_paths(
@@ -34,7 +34,7 @@ def resolve_import_ast_paths(
         if isinstance(import_ast, ast.ImportFrom):
             module = import_ast.module
         path = resolve_import_ast_alias_path(alias, project_root, module)
-        alias_paths[alias] = {"path": path, "module": module}
+        alias_paths[alias] = path
     return alias_paths
 
 

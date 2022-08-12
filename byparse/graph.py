@@ -1,14 +1,12 @@
 import ast
+from logging import warn
 from pathlib import Path
 from typing import Dict, List
 
 import networkx as nx
 
 from byparse.ast_crawl import AstContextCrawler, ModuleCrawler, ast_call_name
-from byparse.resolve_import import (
-    resolve_aliases_paths,
-    resolve_import_ast_alias_path,
-)
+from byparse.resolve_import import resolve_aliases_paths, resolve_import_ast_alias_path
 
 
 def build_project_graph(
@@ -43,61 +41,30 @@ def build_project_graph(
         local_used_names.update(used_names)
 
         for call in context.calls:
-            call_parts = ast_call_name(call).split(".")
-            call_import = call_parts[0]
-            call_source = call_parts[-1]
+            call_name = ast_call_name(call)
+            call_parts = call_name.split(".")
 
-            if call_import in module_ast.context.functions_names:
-                # Function in same file
-                other_func = module_ast.context.functions_names[call_import]
-                other_func_path = link_path_to_name(module_ast.path, other_func.name)
-                graph.add_edge(other_func_path, edge_endpoint)
+            call_path = None
+            if call_name in module_ast.context.known_names:
+                # Function or Class in same file
+                other = module_ast.context.known_names[call_name]
+                call_path = link_path_to_name(module_ast.path, other.name)
+                graph.add_edge(call_path, edge_endpoint)
+                continue
 
-            elif call_import in local_used_names:
-                # In modules imports
-                alias = local_used_names[call_import]
-                call_true_path = local_aliases_paths[alias]["path"]
-                import_module = local_aliases_paths[alias]["module"]
+            level = 0
+            call_chain = call_name
+            call_end = ""
+            while call_chain not in local_used_names and level < len(call_parts):
+                # Look for part of module chain in local used names in decreasing lenght of chain
+                call_chain = ".".join(call_parts[: 1 - level])
+                call_end = ".".join(call_parts[1 - level :])
+                level += 1
 
-                if len(call_parts) > 2:
-                    # In call used chained attributes
-                    # we need to look for the true import path of the submodule
-                    import_alias = ast.alias(name=call_source)
-
-                    module_parts = []
-                    if import_module is not None:
-                        module_parts += [import_module]
-                    module_parts += call_parts[:-1]
-                    module = ".".join(module_parts)
-                    call_true_path = resolve_import_ast_alias_path(
-                        import_alias, module_ast.root, module=module
-                    )
-
-                # Resolve module imported in other module
-                target = module_asts_by_path[call_true_path]
-                target_aliases, target_used_names = resolve_aliases_paths(
-                    target.context.imports, str(target.root)
-                )
-                target_knowed_names = list(
-                    target.context.functions_names.keys()
-                ) + list(target.context.classes_names.keys())
-
-                alias_name = call_import
-
-                while call_source not in target_knowed_names:
-
-                    call_true_path = target_aliases[target_used_names[alias_name]][
-                        "path"
-                    ]
-
-                    target = module_asts_by_path[call_true_path]
-                    target_aliases, target_used_names = resolve_aliases_paths(
-                        target.context.imports, str(target.root)
-                    )
-                    target_knowed_names = list(
-                        target.context.functions_names.keys()
-                    ) + list(target.context.classes_names.keys())
-                    alias_name = call_source
+            if call_chain in local_used_names:
+                # Function or Class imported
+                alias = local_used_names[call_chain]
+                call_true_path: Path = local_aliases_paths[alias]
 
                 # Filter libs
                 if "lib" in call_true_path.parts:
@@ -113,14 +80,44 @@ def build_project_graph(
                     if with_deps == "group":
                         call_path = call_true_path
                     else:
-                        call_path = link_path_to_name(call_true_path, call_source)
+                        call_path = link_path_to_name(call_true_path, call_parts[-1])
                     if call_path not in graph.nodes():
                         graph.add_node(call_path, color="#afaaaf")
-                else:
-                    call_path = link_path_to_name(call_true_path, call_source)
+                    graph.add_edge(call_path, edge_endpoint)
+                    continue
 
-                # Finally add the edge
-                graph.add_edge(call_path, edge_endpoint)
+                target = module_asts_by_path[call_true_path]
+
+                while (
+                    alias.name not in target.context.known_names
+                    or call_end not in target.context.known_names
+                ):
+                    # Solve chained imports until reaching the functions / class definition
+                    if alias.name in target.context.imports_aliases:
+                        module = target.context.imports_aliases[alias.name]["module"]
+                        target_alias = target.context.imports_aliases[alias.name][
+                            "alias"
+                        ]
+
+                    elif call_end in target.context.imports_aliases:
+                        module = target.context.imports_aliases[call_end]["module"]
+                        target_alias = target.context.imports_aliases[call_end]["alias"]
+                    else:
+                        break
+
+                    target_path = resolve_import_ast_alias_path(
+                        target_alias, str(target.root), module
+                    )
+                    target = module_asts_by_path[target_path]
+                    call_true_path = target_path
+
+                call_path = link_path_to_name(call_true_path, call_parts[-1])
+
+            # Finally add the edge
+            if not call_path:
+                warn(f"Could not find call path for {call_name}")
+                continue
+            graph.add_edge(call_path, edge_endpoint)
 
     # Add nodes
     for module_ast in module_asts:

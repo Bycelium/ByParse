@@ -38,6 +38,23 @@ class AstContextCrawler:
     def classes_names(self) -> Dict[str, ast.FunctionDef]:
         return {class_def.name: class_def for class_def in self.classes}
 
+    @property
+    def known_names(self) -> Dict[str, ast.FunctionDef]:
+        names = {}
+        names.update(self.functions_names)
+        names.update(self.classes_names)
+        return names
+
+    @property
+    def imports_aliases(self):
+        aliases: Dict[str, Dict[str, Union[ast.alias, str]]] = {}
+        for imp in self.imports:
+            module = imp.module if hasattr(imp, "module") else None
+            for alias in imp.names:
+                name = alias.name if alias.asname is None else alias.asname
+                aliases[name] = {"alias": alias, "module": module}
+        return aliases
+
     def crawl(
         self,
         ast_element: Union[ast.AST, Optional[ast.expr]],
