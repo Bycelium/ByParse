@@ -1,3 +1,4 @@
+from logging import warning
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -41,12 +42,21 @@ class AstContextCrawler:
 
     @property
     def imports_names(self) -> Dict[str, Union[ast.Import, ast.ImportFrom]]:
-        aliases: Dict[str, Dict[str, Union[ast.Import, ast.ImportFrom]]] = {}
+        name_to_import: Dict[str, Dict[str, Union[ast.Import, ast.ImportFrom]]] = {}
         for imp in self.imports:
             for alias in imp.names:
                 name = alias.name if alias.asname is None else alias.asname
-                aliases[name] = imp
-        return aliases
+                if isinstance(imp, ast.ImportFrom):
+                    name_to_import[name] = ast.ImportFrom(
+                        names=[alias], module=imp.module, level=imp.level
+                    )
+                elif isinstance(imp, ast.Import):
+                    name_to_import[name] = ast.ImportFrom(
+                        names=[alias], module=None, level=0
+                    )
+                else:
+                    raise TypeError()
+        return name_to_import
 
     @property
     def calls_names(self) -> Dict[str, ast.Call]:
@@ -201,15 +211,24 @@ class ModuleCrawler:
         self.context = AstContextCrawler(module_ast)
 
 
-def parse_project(project_path: str) -> List[ModuleCrawler]:
-    project_paths = os.walk(project_path)
-    modules_asts = []
-    for dirpath, _, filenames in project_paths:
-        for filename in filenames:
-            if filename.endswith(".py"):
-                filepath = Path(dirpath) / Path(filename)
-                modules_asts.append(ModuleCrawler(filepath, root=project_path))
-    return modules_asts
+class ProjectCrawler:
+    modules: Dict[Path, ModuleCrawler]
+
+    def __init__(self, project_path: str) -> None:
+        self.path = Path(project_path)
+        self.modules = self.parse_project()
+
+    def parse_project(self) -> Dict[Path, ModuleCrawler]:
+        project_paths = os.walk(self.path)
+        modules_asts = {}
+        for dirpath, _, filenames in project_paths:
+            for filename in filenames:
+                if filename.endswith(".py"):
+                    filepath = Path(dirpath) / Path(filename)
+                    modules_asts[filepath] = ModuleCrawler(filepath, root=self.path)
+                if filename.endswith(".ipynb"):
+                    warning(f"Notebooks are not supported yet, ignored {filename}")
+        return modules_asts
 
 
 def ast_call_name(call: ast.Call):

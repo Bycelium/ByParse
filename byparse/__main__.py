@@ -1,7 +1,7 @@
 import argparse
 
 from byparse.visualisation import networkx_to_pyvis
-from byparse.ast_crawl import parse_project
+from byparse.ast_crawl import ProjectCrawler
 from byparse.graph import build_project_graph
 
 
@@ -24,9 +24,8 @@ def cli_parser():
 
 def main():
     args = cli_parser()
-    project_root = args.root
-    module_asts = parse_project(project_root)
-    graph = build_project_graph(module_asts)
+    project = ProjectCrawler(args.root)
+    graph = build_project_graph(project)
     net = networkx_to_pyvis(graph)
     net.toggle_physics(True)
     net.show(args.output)

@@ -1,20 +1,24 @@
 import ast
-from logging import warn
+from logging import warn, warning
 from pathlib import Path
 from typing import Dict, List
 
 import networkx as nx
 
-from byparse.ast_crawl import AstContextCrawler, ModuleCrawler, ast_call_name
+from byparse.ast_crawl import (
+    AstContextCrawler,
+    ModuleCrawler,
+    ProjectCrawler,
+    ast_call_name,
+)
 from byparse.resolve_import import resolve_aliases_paths, resolve_import_ast_alias_path
 
 
 def build_project_graph(
-    module_asts: List[ModuleCrawler],
+    project: ProjectCrawler,
     with_deps="group",
 ) -> nx.DiGraph:
     graph = nx.DiGraph()
-    module_asts_by_path = {module_ast.path: module_ast for module_ast in module_asts}
 
     def link_path_to_name(path: Path, name: str):
         return ">".join((str(path), name))
@@ -86,29 +90,28 @@ def build_project_graph(
                     graph.add_edge(call_path, edge_endpoint)
                     continue
 
-                target = module_asts_by_path[call_true_path]
+                target = project.modules[call_true_path]
 
                 while (
                     alias.name not in target.context.known_names
                     or call_end not in target.context.known_names
                 ):
                     # Solve chained imports until reaching the functions / class definition
-                    if alias.name in target.context.imports_aliases:
-                        module = target.context.imports_aliases[alias.name]["module"]
-                        target_alias = target.context.imports_aliases[alias.name][
-                            "alias"
-                        ]
-
-                    elif call_end in target.context.imports_aliases:
-                        module = target.context.imports_aliases[call_end]["module"]
-                        target_alias = target.context.imports_aliases[call_end]["alias"]
+                    if alias.name in target.context.imports_names:
+                        import_from_ast = target.context.imports_names[alias.name]
+                    elif call_end in target.context.imports_names:
+                        import_from_ast = target.context.imports_names[call_end]
                     else:
+                        warning(f"Could not resolve call_chain: {call_chain}.")
                         break
+
+                    module = import_from_ast.module
+                    target_alias = import_from_ast.names[0]
 
                     target_path = resolve_import_ast_alias_path(
                         target_alias, str(target.root), module
                     )
-                    target = module_asts_by_path[target_path]
+                    target = project.modules[target_path]
                     call_true_path = target_path
 
                 call_path = link_path_to_name(call_true_path, call_parts[-1])
@@ -120,7 +123,7 @@ def build_project_graph(
             graph.add_edge(call_path, edge_endpoint)
 
     # Add nodes
-    for module_ast in module_asts:
+    for module_ast in project.modules.values():
         add_module_ast_nodes(
             [f.name for f in module_ast.context.functions.keys()],
             path=module_ast.path,
@@ -135,7 +138,7 @@ def build_project_graph(
         )
 
     # Add edges
-    for module_ast in module_asts:
+    for module_ast in project.modules.values():
 
         aliases_paths, used_names = resolve_aliases_paths(
             module_ast.context.imports, str(module_ast.root)
