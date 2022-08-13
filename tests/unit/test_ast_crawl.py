@@ -1,6 +1,5 @@
 from typing import Union, Dict, List
 
-import pytest
 import pytest_check as check
 
 import ast
