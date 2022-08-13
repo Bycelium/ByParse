@@ -1,5 +1,5 @@
 import ast
-from logging import warn, warning
+from logging import debug, warn, warning
 from pathlib import Path
 from typing import Dict, List
 
@@ -94,7 +94,7 @@ def build_project_graph(
 
                 while (
                     alias.name not in target.context.known_names
-                    or call_end not in target.context.known_names
+                    and call_end not in target.context.known_names
                 ):
                     # Solve chained imports until reaching the functions / class definition
                     if alias.name in target.context.imports_names:
@@ -102,7 +102,12 @@ def build_project_graph(
                     elif call_end in target.context.imports_names:
                         import_from_ast = target.context.imports_names[call_end]
                     else:
-                        warning(f"Could not resolve call_chain: {call_chain}.")
+                        warning(f"Could not resolve call_chain: {call_name}")
+                        debug(
+                            f"{alias.name} & {call_end} not found in"
+                            f" known_names:{list(target.context.known_names.keys())} nor in"
+                            f" imports_names:{list(target.context.imports_names.keys())}"
+                        )
                         break
 
                     module = import_from_ast.module
