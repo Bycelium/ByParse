@@ -8,6 +8,7 @@ from byparse.utils import pretty_path_name
 
 
 class AstContextCrawler:
+    root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
 
     functions: Dict[ast.FunctionDef, "AstContextCrawler"]
     classes: Dict[ast.ClassDef, "AstContextCrawler"]
@@ -39,21 +40,24 @@ class AstContextCrawler:
         return {class_def.name: class_def for class_def in self.classes}
 
     @property
+    def imports_names(self) -> Dict[str, Union[ast.Import, ast.ImportFrom]]:
+        aliases: Dict[str, Dict[str, Union[ast.Import, ast.ImportFrom]]] = {}
+        for imp in self.imports:
+            for alias in imp.names:
+                name = alias.name if alias.asname is None else alias.asname
+                aliases[name] = imp
+        return aliases
+
+    @property
+    def calls_names(self) -> Dict[str, ast.Call]:
+        return {ast_call_name(call): call for call in self.calls}
+
+    @property
     def known_names(self) -> Dict[str, ast.FunctionDef]:
         names = {}
         names.update(self.functions_names)
         names.update(self.classes_names)
         return names
-
-    @property
-    def imports_aliases(self):
-        aliases: Dict[str, Dict[str, Union[ast.alias, str]]] = {}
-        for imp in self.imports:
-            module = imp.module if hasattr(imp, "module") else None
-            for alias in imp.names:
-                name = alias.name if alias.asname is None else alias.asname
-                aliases[name] = {"alias": alias, "module": module}
-        return aliases
 
     def crawl(
         self,
@@ -63,9 +67,8 @@ class AstContextCrawler:
         """Recursive depth-first explorer of the abstract syntax tree.
 
         Args:
-            s (Union[ast.AST, Optional[ast.expr]]): #TODO
-            namespace (Optional[str]): #TODO
-            import_resolution (bool): #TODO
+            ast_element (Union[ast.AST, Optional[ast.expr]]): Abstract syntax tree element to crawl.
+            context (AstContextCrawler): Context being crawled.
 
         """
         if ast_element is None:
@@ -152,7 +155,7 @@ class AstContextCrawler:
             pass
 
     def __repr__(self) -> str:
-        ast_elements = ("functions", "classes", "imports", "imperative")
+        ast_elements = ("functions", "classes", "imports", "calls")
 
         elements_to_print = []
         for key in ast_elements:
@@ -218,7 +221,3 @@ def ast_call_name(call: ast.Call):
     if isinstance(element, ast.Name):
         call_name = element.id + call_name
     return call_name
-
-
-def ast_call_names(calls: List[ast.Call]):
-    return [ast_call_name(call) for call in calls]
