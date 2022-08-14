@@ -256,38 +256,32 @@ class ProjectCrawler:
             func_node_color: str = "#e0e069",
             edge_color: str = "blue",
         ):
-            for class_name, class_ast in context.classes_names.items():
-                class_context = context.classes[class_ast]
-                subcontext_path = link_path_to_name(context_path, class_name)
-                graph.add_node(
-                    subcontext_path,
-                    label=class_name,
-                    color=class_node_color,
+            def add_sub_context(attr_name: str, node_color: str, edge_color: str):
+                names_to_ast: Dict[str, ast.AST] = getattr(
+                    context, f"{attr_name}_names"
                 )
-                graph.add_edge(subcontext_path, context_path, color=edge_color)
-                add_sub_contexts(
-                    subcontext_path,
-                    class_context,
-                    class_node_color,
-                    func_node_color,
-                    edge_color,
+                attr_contexts: Dict[ast.AST, AstContextCrawler] = getattr(
+                    context, attr_name
                 )
-            for func_name, func_ast in context.functions_names.items():
-                func_context = context.functions[func_ast]
-                subcontext_path = link_path_to_name(context_path, func_name)
-                graph.add_node(
-                    subcontext_path,
-                    label=func_name,
-                    color=func_node_color,
-                )
-                graph.add_edge(subcontext_path, context_path, color=edge_color)
-                add_sub_contexts(
-                    subcontext_path,
-                    func_context,
-                    class_node_color,
-                    func_node_color,
-                    edge_color,
-                )
+                for name, ast_elem in names_to_ast.items():
+                    class_context = attr_contexts[ast_elem]
+                    subcontext_path = link_path_to_name(context_path, name)
+                    graph.add_node(
+                        subcontext_path,
+                        label=name,
+                        color=node_color,
+                    )
+                    graph.add_edge(subcontext_path, context_path, color=edge_color)
+                    add_sub_contexts(
+                        subcontext_path,
+                        class_context,
+                        class_node_color,
+                        func_node_color,
+                        edge_color,
+                    )
+
+            add_sub_context("functions", func_node_color, edge_color)
+            add_sub_context("classes", class_node_color, edge_color)
 
         for module_path, module_crawler in self.modules.items():
             rel_path = module_path.relative_to(self.path)
