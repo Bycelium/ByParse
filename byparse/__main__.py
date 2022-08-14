@@ -29,7 +29,7 @@ def main():
     basicConfig(level=DEBUG)
     project = ProjectCrawler(args.root)
     graph = project.build_contexts_graph()
-    net = networkx_to_pyvis()
+    net = networkx_to_pyvis(graph)
     net.toggle_physics(True)
     net.show(args.output)
 

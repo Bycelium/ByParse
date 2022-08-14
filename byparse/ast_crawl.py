@@ -15,15 +15,15 @@ class AstContextCrawler:
     functions: Dict[ast.FunctionDef, "AstContextCrawler"]
     classes: Dict[ast.ClassDef, "AstContextCrawler"]
 
-    imports: List[Union[ast.Import, ast.ImportFrom]]
-    calls: List[ast.Call]
+    imports: Dict[str, Union[ast.Import, ast.ImportFrom]]
+    calls: Dict[str, ast.Call]
 
     def __init__(
         self, root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
     ) -> None:
         self.root_ast = root_ast
-        self.imports = []
-        self.calls = []
+        self.imports = {}
+        self.calls = {}
         self.functions = {}
         self.classes = {}
 
@@ -33,41 +33,27 @@ class AstContextCrawler:
             for i in root_ast.body:
                 self.crawl(i, self)
 
-    @property
-    def functions_names(self) -> Dict[str, ast.FunctionDef]:
-        return {func_def.name: func_def for func_def in self.functions}
+    def add_import(self, import_ast: Union[ast.Import, ast.ImportFrom]):
+        for alias in import_ast.names:
+            name = alias.name if alias.asname is None else alias.asname
+            if isinstance(import_ast, ast.ImportFrom):
+                module, level = (import_ast.module, import_ast.level)
+            elif isinstance(import_ast, ast.Import):
+                module, level = (None, 0)
+            else:
+                raise TypeError()
+            self.imports[name] = ast.ImportFrom(
+                names=[alias], module=module, level=level
+            )
 
-    @property
-    def classes_names(self) -> Dict[str, ast.FunctionDef]:
-        return {class_def.name: class_def for class_def in self.classes}
-
-    @property
-    def imports_names(self) -> Dict[str, Union[ast.Import, ast.ImportFrom]]:
-        name_to_import: Dict[str, Dict[str, Union[ast.Import, ast.ImportFrom]]] = {}
-        for imp in self.imports:
-            for alias in imp.names:
-                name = alias.name if alias.asname is None else alias.asname
-                if isinstance(imp, ast.ImportFrom):
-                    name_to_import[name] = ast.ImportFrom(
-                        names=[alias], module=imp.module, level=imp.level
-                    )
-                elif isinstance(imp, ast.Import):
-                    name_to_import[name] = ast.ImportFrom(
-                        names=[alias], module=None, level=0
-                    )
-                else:
-                    raise TypeError()
-        return name_to_import
-
-    @property
-    def calls_names(self) -> Dict[str, ast.Call]:
-        return {ast_call_name(call): call for call in self.calls}
+    def add_call(self, call_ast: ast.Call):
+        self.calls[ast_call_name(call_ast)] = call_ast
 
     @property
     def known_names(self) -> Dict[str, ast.FunctionDef]:
         names = {}
-        names.update(self.functions_names)
-        names.update(self.classes_names)
+        names.update(self.functions)
+        names.update(self.classes)
         return names
 
     def crawl(
@@ -89,15 +75,15 @@ class AstContextCrawler:
 
         # Enumerate the types we can encounter
         if isinstance(ast_element, (ast.Import, ast.ImportFrom)):
-            context.imports.append(ast_element)
+            context.add_import(ast_element)
         elif isinstance(ast_element, ast.Call):
-            context.calls.append(ast_element)
+            context.add_call(ast_element)
             for v in ast_element.args:
                 self.crawl(v, context)
         elif isinstance(ast_element, ast.FunctionDef):
-            self.functions[ast_element] = AstContextCrawler(ast_element)
+            self.functions[ast_element.name] = AstContextCrawler(ast_element)
         elif isinstance(ast_element, ast.ClassDef):
-            self.classes[ast_element] = AstContextCrawler(ast_element)
+            self.classes[ast_element.name] = AstContextCrawler(ast_element)
         elif isinstance(
             ast_element,
             (
@@ -257,14 +243,10 @@ class ProjectCrawler:
             edge_color: str = "blue",
         ):
             def add_sub_context(attr_name: str, node_color: str, edge_color: str):
-                names_to_ast: Dict[str, ast.AST] = getattr(
-                    context, f"{attr_name}_names"
-                )
-                attr_contexts: Dict[ast.AST, AstContextCrawler] = getattr(
+                attr_contexts: Dict[str, AstContextCrawler] = getattr(
                     context, attr_name
                 )
-                for name, ast_elem in names_to_ast.items():
-                    class_context = attr_contexts[ast_elem]
+                for name, subcontext in attr_contexts.items():
                     subcontext_path = link_path_to_name(context_path, name)
                     graph.add_node(
                         subcontext_path,
@@ -274,7 +256,7 @@ class ProjectCrawler:
                     graph.add_edge(subcontext_path, context_path, color=edge_color)
                     add_sub_contexts(
                         subcontext_path,
-                        class_context,
+                        subcontext,
                         class_node_color,
                         func_node_color,
                         edge_color,

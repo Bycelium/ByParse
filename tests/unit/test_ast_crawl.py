@@ -11,19 +11,16 @@ def check_expected_attr_subcontext(
     expected: Union[List, Dict],
     attr_name: str,
 ):
-    context_attr_name = getattr(context, f"{attr_name}_names")
-    context_attr = getattr(context, attr_name)
+    context_attr: Dict[str, AstContextCrawler] = getattr(context, attr_name)
 
     if isinstance(expected, list):  # Calls and imports
-        check.equal(set(context_attr_name.keys()), set(expected))
+        check.equal(set(context_attr.keys()), set(expected))
     elif isinstance(expected, dict):  # Classes and functions subcontexts
-        check.equal(set(context_attr_name.keys()), set(expected))
+        check.equal(set(context_attr.keys()), set(expected))
         for exp, subexp in expected.items():
-            check.is_in(exp, context_attr_name)
-            if exp in context_attr_name:
-                subcontext_ast = context_attr_name[exp]
-                subcontext = context_attr[subcontext_ast]
-                check_expected_subcontexts(subcontext, subexp)
+            check.is_in(exp, context_attr)
+            if exp in context_attr.items():
+                check_expected_subcontexts(context_attr[exp], subexp)
     else:
         raise TypeError()
 
@@ -50,7 +47,7 @@ class TestAstContextCrawler:
 
         module_ast = ast.parse(source)
         module = AstContextCrawler(module_ast)
-        check.equal(set(module.imports_names.keys()), set(expected_imports_names))
+        check.equal(set(module.imports.keys()), set(expected_imports_names))
 
     def test_calls(self):
         source = "\n".join(
@@ -65,7 +62,7 @@ class TestAstContextCrawler:
 
         module_ast = ast.parse(source)
         module = AstContextCrawler(module_ast)
-        check.equal(set(module.calls_names.keys()), set(expected_call_names))
+        check.equal(set(module.calls.keys()), set(expected_call_names))
 
     def test_functions_context(self):
 
