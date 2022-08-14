@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from logging import warning
 import os
 from pathlib import Path
@@ -198,6 +199,44 @@ class ModuleCrawler:
         self.context = AstContextCrawler(module_ast)
 
 
+class EdgeType(Enum):
+    PATH = auto()
+    CONTEXT = auto()
+
+
+class NodeType(Enum):
+    FOLDER = auto()
+    FILE = auto()
+    CLASS = auto()
+    FUNCTION = auto()
+
+
+def color_context_graph(
+    graph: nx.DiGraph,
+    node_folder_color: str = "rgb(155, 155, 55)",
+    node_file_color: str = "rgb(55, 155, 55)",
+    node_class_color: str = "#4ec994",
+    node_func_color: str = "#e0e069",
+    edge_path_color: str = "black",
+    edge_context_color: str = "blue",
+):
+    node_type_color = {
+        NodeType.FOLDER.name: node_folder_color,
+        NodeType.FILE.name: node_file_color,
+        NodeType.CLASS.name: node_class_color,
+        NodeType.FUNCTION.name: node_func_color,
+    }
+    for n, data in graph.nodes(data=True):
+        graph.nodes[n]["color"] = node_type_color[data["type"]]
+
+    edge_type_color = {
+        EdgeType.PATH.name: edge_path_color,
+        EdgeType.CONTEXT.name: edge_context_color,
+    }
+    for u, v, data in graph.edges(data=True):
+        graph.edges[u, v]["color"] = edge_type_color[data["type"]]
+
+
 class ProjectCrawler:
     modules: Dict[Path, ModuleCrawler]
 
@@ -220,12 +259,6 @@ class ProjectCrawler:
     def build_contexts_graph(
         self,
         graph: Optional[nx.DiGraph] = None,
-        node_folder_color: str = "rgb(155, 155, 55)",
-        node_file_color: str = "rgb(55, 155, 55)",
-        node_class_color: str = "#4ec994",
-        node_func_color: str = "#e0e069",
-        edge_path_color: str = "black",
-        edge_context_color: str = "blue",
     ) -> nx.DiGraph:
 
         if graph is None:
@@ -234,50 +267,34 @@ class ProjectCrawler:
         def link_path_to_name(path: Path, name: str):
             return ">".join((str(path), name))
 
-        def add_parent_folders(
-            path: Path,
-            node_color: str = node_folder_color,
-            edge_color: str = edge_path_color,
-        ):
+        def add_parent_folders(path: Path):
             parent = path.parent
             if str(parent) != ".":
-                graph.add_node(str(parent), label=parent.name, color=node_color)
-                graph.add_edge(str(path), str(parent), color=edge_color)
+                graph.add_node(
+                    str(parent), label=parent.name, type=NodeType.FOLDER.name
+                )
+                graph.add_edge(str(path), str(parent), type=EdgeType.PATH.name)
                 add_parent_folders(parent)
 
-        def add_sub_contexts(
-            context_path: str,
-            context: AstContextCrawler,
-            node_class_color: str = node_class_color,
-            node_func_color: str = node_func_color,
-            edge_color: str = edge_context_color,
-        ):
-            def add_sub_context(attr_name: str, node_color: str, edge_color: str):
+        def add_sub_contexts(context_path: str, context: AstContextCrawler):
+            def add_sub_context(attr_name: str, node_type: NodeType):
                 attr_contexts: Dict[str, AstContextCrawler] = getattr(
                     context, attr_name
                 )
                 for name, subcontext in attr_contexts.items():
                     subcontext_path = link_path_to_name(context_path, name)
-                    graph.add_node(
-                        subcontext_path,
-                        label=name,
-                        color=node_color,
+                    graph.add_node(subcontext_path, label=name, type=node_type)
+                    graph.add_edge(
+                        subcontext_path, context_path, type=EdgeType.CONTEXT.name
                     )
-                    graph.add_edge(subcontext_path, context_path, color=edge_color)
-                    add_sub_contexts(
-                        subcontext_path,
-                        subcontext,
-                        node_class_color,
-                        node_func_color,
-                        edge_color,
-                    )
+                    add_sub_contexts(subcontext_path, subcontext)
 
-            add_sub_context("functions", node_func_color, edge_color)
-            add_sub_context("classes", node_class_color, edge_color)
+            add_sub_context("functions", NodeType.FUNCTION.name)
+            add_sub_context("classes", NodeType.CLASS.name)
 
         for module_path, module_crawler in self.modules.items():
             rel_path = module_path.relative_to(self.path)
-            graph.add_node(str(rel_path), label=rel_path.name, color=node_file_color)
+            graph.add_node(str(rel_path), label=rel_path.name, type=NodeType.FILE.name)
             add_parent_folders(rel_path)
             add_sub_contexts(str(rel_path), module_crawler.context)
 

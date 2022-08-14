@@ -1,7 +1,7 @@
 import argparse
 
 from byparse.visualisation import networkx_to_pyvis
-from byparse.ast_crawl import ProjectCrawler
+from byparse.ast_crawl import ProjectCrawler, color_context_graph
 from byparse.graph import build_project_graph
 
 from logging import DEBUG, basicConfig
@@ -29,6 +29,8 @@ def main():
     basicConfig(level=DEBUG)
     project = ProjectCrawler(args.root)
     graph = project.build_contexts_graph()
+    color_context_graph(graph)
+
     net = networkx_to_pyvis(graph)
     net.toggle_physics(True)
     net.show(args.output)
