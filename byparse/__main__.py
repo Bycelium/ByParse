@@ -28,8 +28,8 @@ def main():
     args = cli_parser()
     basicConfig(level=DEBUG)
     project = ProjectCrawler(args.root)
-    graph = build_project_graph(project)
-    net = networkx_to_pyvis(graph)
+    graph = project.build_contexts_graph()
+    net = networkx_to_pyvis()
     net.toggle_physics(True)
     net.show(args.output)
 
