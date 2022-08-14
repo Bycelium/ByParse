@@ -2,8 +2,6 @@ from pathlib import Path
 import pytest
 import pytest_check as check
 
-import json
-import networkx as nx
 from networkx.readwrite.json_graph import node_link_data, node_link_graph
 
 from byparse.project_crawl import ProjectCrawler
