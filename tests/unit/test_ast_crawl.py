@@ -3,7 +3,7 @@ from typing import Union, Dict, List
 import pytest_check as check
 
 import ast
-from byparse.ast_crawl import AstContextCrawler
+from byparse.context_crawl import AstContextCrawler
 
 
 def check_expected_attr_subcontext(

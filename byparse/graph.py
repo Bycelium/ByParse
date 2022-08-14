@@ -5,12 +5,8 @@ from typing import Dict, List
 
 import networkx as nx
 
-from byparse.ast_crawl import (
-    AstContextCrawler,
-    ModuleCrawler,
-    ProjectCrawler,
-    ast_call_name,
-)
+from byparse.context_crawl import AstContextCrawler, ast_call_name
+from byparse.project_crawl import ModuleCrawler, ProjectCrawler
 from byparse.resolve_import import resolve_aliases_paths, resolve_import_ast_alias_path
 
 
