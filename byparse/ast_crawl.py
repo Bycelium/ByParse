@@ -1,7 +1,7 @@
 from logging import warning
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
 import ast
 import networkx as nx
@@ -217,17 +217,27 @@ class ProjectCrawler:
                     warning(f"Notebooks are not supported yet, ignored {filename}")
         return modules_asts
 
-    def build_contexts_graph(self) -> nx.DiGraph:
+    def build_contexts_graph(
+        self,
+        graph: Optional[nx.DiGraph] = None,
+        node_folder_color: str = "rgb(155, 155, 55)",
+        node_file_color: str = "rgb(55, 155, 55)",
+        node_class_color: str = "#4ec994",
+        node_func_color: str = "#e0e069",
+        edge_path_color: str = "black",
+        edge_context_color: str = "blue",
+    ) -> nx.DiGraph:
 
-        graph = nx.DiGraph()
+        if graph is None:
+            graph = nx.DiGraph()
 
         def link_path_to_name(path: Path, name: str):
             return ">".join((str(path), name))
 
         def add_parent_folders(
             path: Path,
-            node_color: str = "rgb(155, 155, 55)",
-            edge_color: str = "black",
+            node_color: str = node_folder_color,
+            edge_color: str = edge_path_color,
         ):
             parent = path.parent
             if str(parent) != ".":
@@ -238,9 +248,9 @@ class ProjectCrawler:
         def add_sub_contexts(
             context_path: str,
             context: AstContextCrawler,
-            class_node_color: str = "#4ec994",
-            func_node_color: str = "#e0e069",
-            edge_color: str = "blue",
+            node_class_color: str = node_class_color,
+            node_func_color: str = node_func_color,
+            edge_color: str = edge_context_color,
         ):
             def add_sub_context(attr_name: str, node_color: str, edge_color: str):
                 attr_contexts: Dict[str, AstContextCrawler] = getattr(
@@ -257,21 +267,17 @@ class ProjectCrawler:
                     add_sub_contexts(
                         subcontext_path,
                         subcontext,
-                        class_node_color,
-                        func_node_color,
+                        node_class_color,
+                        node_func_color,
                         edge_color,
                     )
 
-            add_sub_context("functions", func_node_color, edge_color)
-            add_sub_context("classes", class_node_color, edge_color)
+            add_sub_context("functions", node_func_color, edge_color)
+            add_sub_context("classes", node_class_color, edge_color)
 
         for module_path, module_crawler in self.modules.items():
             rel_path = module_path.relative_to(self.path)
-            graph.add_node(
-                str(rel_path),
-                label=rel_path.name,
-                color="rgb(55, 155, 55)",
-            )
+            graph.add_node(str(rel_path), label=rel_path.name, color=node_file_color)
             add_parent_folders(rel_path)
             add_sub_contexts(str(rel_path), module_crawler.context)
 
