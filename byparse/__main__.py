@@ -1,7 +1,7 @@
 import argparse
 
-from byparse.visualisation import networkx_to_pyvis
-from byparse.project_crawl import ProjectCrawler, color_context_graph
+from byparse.visualisation import networkx_to_pyvis, color_context_graph
+from byparse.project_crawl import ProjectCrawler
 
 from logging import DEBUG, basicConfig
 

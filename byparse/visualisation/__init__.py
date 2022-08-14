@@ -1,2 +1,2 @@
-from byparse.graph import build_project_graph
+from byparse.visualisation.graph_vis import color_context_graph
 from byparse.visualisation.pyviz import networkx_to_pyvis

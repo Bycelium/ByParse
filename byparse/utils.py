@@ -7,3 +7,7 @@ def pretty_path_name(path: Path):
         suffix = path.name[:-3].replace("_", "")
         name = f"{path.parent.name}({suffix})"
     return name
+
+
+def link_path_to_name(path: Path, name: str):
+    return ">".join((str(path), name))
