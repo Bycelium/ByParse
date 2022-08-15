@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
 
 import ast
 import networkx as nx
@@ -54,8 +54,8 @@ def add_context_calls_edges(
 
     node_type = root_ast_to_node_type(context.root_ast)
 
-    if context_path not in graph.nodes():
-        graph.add_node(context_path, label=label, type=node_type)
+    if str(context_path) not in graph.nodes():
+        graph.add_node(str(context_path), label=label, type=node_type)
 
     # Add local imports
     local_aliases_paths, local_used_names = resolve_aliases_paths(
@@ -80,11 +80,13 @@ def add_context_calls_edges(
             continue
 
         if project.path.parts[0] in call_path:
-            call_path = Path(call_path).relative_to(project.path)
+            call_path = str(Path(call_path).relative_to(project.path))
 
-        if call_path not in graph.nodes():
-            graph.add_node(call_path, label=call_name.split(".")[-1], type=call_type)
-        graph.add_edge(call_path, context_path, type=EdgeType.CALL.name)
+        if str(call_path) not in graph.nodes():
+            graph.add_node(
+                str(call_path), label=call_name.split(".")[-1], type=call_type
+            )
+        graph.add_edge(str(call_path), str(context_path), type=EdgeType.CALL.name)
 
     for fname, func_context in context.functions.items():
         fpath = link_path_to_name(context_path, fname)
@@ -118,7 +120,7 @@ def resolve_call_path(
     local_used_names: Dict[str, "ast.alias"],
     local_aliases_paths: Dict["ast.alias", Path],
     with_deps=False,
-):
+) -> Tuple[Union[Path, str, None], NodeType]:
     call_parts = call_name.split(".")
 
     call_path = None
