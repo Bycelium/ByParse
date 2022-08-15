@@ -3,25 +3,25 @@ from typing import Dict, List, Optional, Tuple, Union
 import ast
 from pathlib import Path
 from importlib.util import find_spec
-from logging import warn
+from logging import warning
 
 
 def resolve_aliases_paths(
-    imports: List[Union[ast.Import, ast.ImportFrom]],
+    imports: Dict[str, Union[ast.Import, ast.ImportFrom]],
     project_root: str,
 ) -> Tuple[Dict[ast.alias, Path], Dict[str, ast.alias]]:
-    aliases_paths: Dict[ast.alias, Path] = {}
-    for import_element in imports:
-        aliases_paths.update(
+    aliases_to_paths: Dict[ast.alias, Path] = {}
+    for import_element in imports.values():
+        aliases_to_paths.update(
             resolve_import_ast_paths(import_element, project_root=project_root)
         )
 
-    used_names: Dict[str, ast.alias] = {}
-    for alias in aliases_paths:
+    name_to_alias: Dict[str, ast.alias] = {}
+    for alias in aliases_to_paths:
         used_name = alias.asname if alias.asname is not None else alias.name
-        used_names[used_name] = alias
+        name_to_alias[used_name] = alias
 
-    return aliases_paths, used_names
+    return aliases_to_paths, name_to_alias
 
 
 def resolve_import_ast_paths(
@@ -69,7 +69,7 @@ def resolve_import_ast_alias_path(
         warning_msg = f"Could not find a reference for alias {alias.name}"
         if module is not None:
             warning_msg += f" at {module}"
-        warn(warning_msg)
+        warning(warning_msg)
         return Path(f"lib/not-found/{alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
         return Path(f"lib/built-in/{alias.name}")

@@ -1,6 +1,8 @@
 from typing import Dict, Optional, Union
 import ast
 
+from byparse.utils import ast_call_name
+
 
 class AstContextCrawler:
     root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
@@ -43,7 +45,7 @@ class AstContextCrawler:
         self.calls[ast_call_name(call_ast)] = call_ast
 
     @property
-    def known_names(self) -> Dict[str, ast.FunctionDef]:
+    def known_names(self) -> Dict[str, "AstContextCrawler"]:
         names = {}
         names.update(self.functions)
         names.update(self.classes)
@@ -153,7 +155,7 @@ class AstContextCrawler:
             if values:
                 print_values = str(len(values))
                 if key == "functions":
-                    print_values = str([val.name for val in values])
+                    print_values = str([val for val in values])
                 if key == "imports":
                     print_values = []
                     for val in values:
@@ -168,15 +170,5 @@ class AstContextCrawler:
                 elements_to_print.append(f"{key.capitalize()}({print_values})")
 
         content = ", ".join(elements_to_print)
-        return f"AstContext({content})"
-
-
-def ast_call_name(call: ast.Call):
-    call_name = ""
-    element = call.func
-    while isinstance(element, ast.Attribute):
-        call_name = "." + element.attr + call_name
-        element = element.value
-    if isinstance(element, ast.Name):
-        call_name = element.id + call_name
-    return call_name
+        root_name = self.root_ast.name if hasattr(self.root_ast, "name") else "Module"
+        return f"AstContext({root_name}, {content})"

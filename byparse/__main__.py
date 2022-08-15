@@ -28,6 +28,7 @@ def main():
     basicConfig(level=DEBUG)
     project = ProjectCrawler(args.root)
     graph = project.build_contexts_graph()
+    graph = project.build_call_graph(graph)
     color_context_graph(graph)
 
     net = networkx_to_pyvis(graph)

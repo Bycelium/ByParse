@@ -1,4 +1,6 @@
+import ast
 from pathlib import Path
+from typing import Union
 
 
 def pretty_path_name(path: Path):
@@ -9,5 +11,16 @@ def pretty_path_name(path: Path):
     return name
 
 
-def link_path_to_name(path: Path, name: str):
+def link_path_to_name(path: Union[Path, str], name: str):
     return ">".join((str(path), name))
+
+
+def ast_call_name(call: ast.Call):
+    call_name = ""
+    element = call.func
+    while isinstance(element, ast.Attribute):
+        call_name = "." + element.attr + call_name
+        element = element.value
+    if isinstance(element, ast.Name):
+        call_name = element.id + call_name
+    return call_name
