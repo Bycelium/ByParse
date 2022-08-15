@@ -2,6 +2,8 @@ import ast
 from pathlib import Path
 from typing import Union
 
+from byparse.abc import NodeType
+
 
 def pretty_path_name(path: Path):
     name = path.name
@@ -24,3 +26,14 @@ def ast_call_name(call: ast.Call):
     if isinstance(element, ast.Name):
         call_name = element.id + call_name
     return call_name
+
+
+def root_ast_to_node_type(root_ast: ast.AST) -> str:
+    if isinstance(root_ast, ast.FunctionDef):
+        return NodeType.FUNCTION.name
+    elif isinstance(root_ast, ast.ClassDef):
+        return NodeType.CLASS.name
+    elif isinstance(root_ast, ast.Module):
+        return NodeType.FILE.name
+    else:
+        raise TypeError()

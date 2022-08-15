@@ -27,8 +27,8 @@ def main():
     args = cli_parser()
     init_logger(log_level=DEBUG, package_name=__package__)
     project = ProjectCrawler(args.root)
-    graph = project.build_contexts_graph()
-    graph = project.build_call_graph(graph)
+    # graph = project.build_contexts_graph()
+    graph = project.build_call_graph()
     color_context_graph(graph)
 
     net = networkx_to_pyvis(graph)
