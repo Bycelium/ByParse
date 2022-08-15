@@ -3,14 +3,14 @@ from typing import Dict, Optional, Union
 
 import os
 import ast
-
-from logging import warning
-
 import networkx as nx
 
 from byparse.context_crawl import AstContextCrawler
 from byparse.utils import pretty_path_name
 from byparse.graphs import build_contexts_graph, build_call_graph
+from byparse.logging_utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 class ModuleCrawler:
@@ -51,7 +51,9 @@ class ProjectCrawler:
                         filepath, root=self.path
                     )
                 elif filename.endswith(".ipynb"):
-                    warning(f"Notebooks are not supported yet, ignored {filename}")
+                    LOGGER.warning(
+                        "Notebooks are not supported yet, ignored %s", filename
+                    )
         return modules_asts
 
     def build_contexts_graph(

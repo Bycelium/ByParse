@@ -3,7 +3,9 @@ from typing import Dict, Optional, Tuple, Union
 import ast
 from pathlib import Path
 from importlib.util import find_spec
-from logging import warning
+from byparse.logging_utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 def resolve_aliases_paths(
@@ -66,10 +68,10 @@ def resolve_import_ast_alias_path(
     # For installed packages
     spec = find_spec(alias.name)
     if spec is None:
-        warning_msg = f"Could not find a reference for alias {alias.name}"
+        warning_msg = f"{alias.name}"
         if module is not None:
             warning_msg += f" at {module}"
-        warning(warning_msg)
+        LOGGER.warning("Could not find a reference for alias %s", warning_msg)
         return Path(f"lib/not-found/{alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
         return Path(f"lib/built-in/{alias.name}")

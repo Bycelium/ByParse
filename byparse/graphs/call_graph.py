@@ -1,4 +1,3 @@
-from logging import debug, warning
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
@@ -8,6 +7,9 @@ import networkx as nx
 from byparse.abc import NodeType, EdgeType
 from byparse.utils import link_path_to_name
 from byparse.resolve_import import resolve_aliases_paths, resolve_import_ast_paths
+from byparse.logging_utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
 
@@ -74,7 +76,7 @@ def add_context_calls_edges(
         )
 
         if not call_path:
-            warning(f"Could not find call path for {call_name}")
+            LOGGER.warning("Could not find call path for %s", call_name)
             continue
 
         if project.path.parts[0] in call_path:
@@ -115,7 +117,7 @@ def resolve_call_path(
     module: "ModuleCrawler",
     local_used_names: Dict[str, "ast.alias"],
     local_aliases_paths: Dict["ast.alias", Path],
-    with_deps="group",
+    with_deps=False,
 ):
     call_parts = call_name.split(".")
 
@@ -169,11 +171,16 @@ def resolve_call_path(
             elif call_end in target.context.imports:
                 import_from_ast = target.context.imports[call_end]
             else:
-                warning(f"Could not resolve call_chain: {call_name}")
-                debug(
-                    f"{alias.name} & {call_end} not found in"
-                    f" known_names:{list(target.context.known_names.keys())} nor in"
-                    f" imports_names:{list(target.context.imports.keys())}"
+                known_names = str(list(target.context.known_names.keys()))
+                import_names = str(list(target.context.imports.keys()))
+                LOGGER.debug(
+                    "Could not resolve call_chain %s: %s & %s not found in"
+                    " known_names:%s nor in imports_names:%s",
+                    call_name,
+                    alias.name,
+                    call_end,
+                    known_names,
+                    import_names,
                 )
                 return None, None
 

@@ -1,9 +1,9 @@
 import argparse
+from logging import DEBUG
 
 from byparse.visualisation import networkx_to_pyvis, color_context_graph
 from byparse.project_crawl import ProjectCrawler
-
-from logging import DEBUG, basicConfig
+from byparse.logging_utils import init_logger
 
 
 def cli_parser():
@@ -25,7 +25,7 @@ def cli_parser():
 
 def main():
     args = cli_parser()
-    basicConfig(level=DEBUG)
+    init_logger(log_level=DEBUG, package_name=__package__)
     project = ProjectCrawler(args.root)
     graph = project.build_contexts_graph()
     graph = project.build_call_graph(graph)
