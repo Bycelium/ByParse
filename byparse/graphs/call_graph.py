@@ -65,16 +65,19 @@ def add_context_calls_edges(
 
     for call_name, _ in context.calls.items():
 
+        # Ignore builtins calls
+        if call_name in __builtins__:
+            continue
+
         call_path, call_type = resolve_call_path(
             call_name, project, module, local_used_names, local_aliases_paths
         )
 
-        # Finally add the edge
         if not call_path:
             warning(f"Could not find call path for {call_name}")
             continue
 
-        if project.path.root in call_path:
+        if project.path.parts[0] in call_path:
             call_path = Path(call_path).relative_to(project.path)
 
         if call_path not in graph.nodes():
