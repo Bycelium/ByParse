@@ -4,7 +4,13 @@ from pathlib import Path
 import pytest
 import pytest_check as check
 
-from byparse.graphs.call_graph import resolve_call
+from byparse.path_resolvers.calls import (
+    resolve_call,
+    resolve_self_call,
+    resolve_import_path_chain,
+    resolve_lib_call,
+    get_local_known_chain,
+)
 from byparse.project_crawl import AstContextCrawler
 from byparse.abc import NodeType
 
@@ -14,7 +20,7 @@ class TestResolveCallPath:
     def setup(self):
         self.project_root = Path(__file__).parent.parent / Path("toy_project")
 
-    def test_call_func_in_module(self):
+    def test_resolve_self_call_func(self):
         call_name = "func"
 
         source = "\n".join(
@@ -28,25 +34,12 @@ class TestResolveCallPath:
         context = AstContextCrawler(module_ast)
         context_path = self.project_root / Path("context")
 
-        project_modules = {}
-        local_used_names = {}
-        local_aliases_paths = {}
+        call_path, call_type = resolve_self_call(call_name, context, context_path)
 
-        call_path, call_type = resolve_call(
-            call_name,
-            context,
-            context_path,
-            self.project_root,
-            project_modules,
-            local_used_names,
-            local_aliases_paths,
-            with_deps=False,
-        )
-
-        check.equal(call_path, "context>func")
+        check.equal(call_path.relative_to(self.project_root), Path("context>func"))
         check.equal(call_type, NodeType.FUNCTION.name)
 
-    def test_call_func_in_module(self):
+    def test_resolve_self_call_class(self):
         call_name = "MyClass"
 
         source = "\n".join(
@@ -60,20 +53,7 @@ class TestResolveCallPath:
         context = AstContextCrawler(module_ast)
         context_path = self.project_root / Path("context")
 
-        project_modules = {}
-        local_used_names = {}
-        local_aliases_paths = {}
+        call_path, call_type = resolve_self_call(call_name, context, context_path)
 
-        call_path, call_type = resolve_call(
-            call_name,
-            context,
-            context_path,
-            self.project_root,
-            project_modules,
-            local_used_names,
-            local_aliases_paths,
-            with_deps=False,
-        )
-
-        check.equal(call_path, Path("context>MyClass"))
+        check.equal(call_path.relative_to(self.project_root), Path("context>MyClass"))
         check.equal(call_type, NodeType.CLASS.name)
