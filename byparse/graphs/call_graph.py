@@ -72,8 +72,11 @@ def add_context_calls_edges(
             warning(f"Could not find call path for {call_name}")
             continue
 
+        if project.path.root in call_path:
+            call_path = Path(call_path).relative_to(project.path)
+
         if call_path not in graph.nodes():
-            graph.add_node(call_path, type=call_type)
+            graph.add_node(call_path, label=call_name.split(".")[-1], type=call_type)
         graph.add_edge(call_path, context_path, type=EdgeType.CALL.name)
 
     for fname, func_context in context.functions.items():
@@ -131,7 +134,6 @@ def resolve_call_path(
         # Function or Class imported
         alias = local_used_names[call_chain]
         call_true_path: Path = local_aliases_paths[alias]
-        call_true_path = call_true_path.relative_to(project.path)
 
         # Filter libs
         if "lib" in call_true_path.parts:
@@ -150,7 +152,7 @@ def resolve_call_path(
                 call_path = link_path_to_name(call_true_path, call_parts[-1])
             return call_path, NodeType.LIBRAIRY.name
 
-        target = project.modules[call_true_path]
+        target = project.modules[call_true_path.relative_to(project.path)]
 
         while (
             alias.name not in target.context.known_names

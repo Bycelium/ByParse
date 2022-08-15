@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import ast
 from pathlib import Path
@@ -44,7 +44,7 @@ def resolve_import_ast_alias_path(
     module: Optional[str] = None,  # Not none only if ast.ImportFrom
 ) -> Path:
 
-    if module is not None:
+    if module is not None:  # ImportFrom
         full_chain = ".".join((module, alias.name))
 
         # For modules and subpackage
@@ -57,7 +57,7 @@ def resolve_import_ast_alias_path(
         if path is not None:
             return path
 
-    else:
+    else:  # Import
         # For modules and subpackage
         path = _relative_resolution(alias.name, project_root)
         if path is not None:
