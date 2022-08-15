@@ -31,6 +31,22 @@ def build_call_graph(
     return graph
 
 
+def add_context_node(
+    graph: nx.DiGraph, context_path: Union[Path, str], context: "AstContextCrawler"
+):
+    if isinstance(context_path, Path):
+        label = context_path.name
+    elif isinstance(context_path, str):
+        label = ".".join(context_path.split(">")[1:])
+    else:
+        raise TypeError()
+
+    node_type = root_ast_to_node_type(context.root_ast)
+
+    if str(context_path) not in graph.nodes():
+        graph.add_node(str(context_path), label=label, type=node_type)
+
+
 def add_context_calls_edges(
     graph: nx.DiGraph,
     project: "ProjectCrawler",
@@ -45,17 +61,7 @@ def add_context_calls_edges(
     used_names = {} if used_names is None else used_names
 
     # Add context node
-    if isinstance(context_path, Path):
-        label = context_path.name
-    elif isinstance(context_path, str):
-        label = ".".join(context_path.split(">")[1:])
-    else:
-        raise TypeError()
-
-    node_type = root_ast_to_node_type(context.root_ast)
-
-    if str(context_path) not in graph.nodes():
-        graph.add_node(str(context_path), label=label, type=node_type)
+    add_context_node(graph, context_path, context)
 
     # Add local imports
     local_aliases_paths, local_used_names = resolve_aliases_paths(
