@@ -1,6 +1,6 @@
 from logging import debug, warning
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 import ast
 import networkx as nx
@@ -34,7 +34,7 @@ def add_context_calls_edges(
     project: "ProjectCrawler",
     module: "ModuleCrawler",
     context: "AstContextCrawler",
-    context_path: Path,
+    context_path: Union[Path, str],
     aliases_paths: Dict["ast.alias", Path] = None,
     used_names: Dict[str, "ast.alias"] = None,
 ):
@@ -45,8 +45,10 @@ def add_context_calls_edges(
     # Add context node
     if isinstance(context_path, Path):
         label = context_path.name
+    elif isinstance(context_path, str):
+        label = ".".join(context_path.split(">")[1:])
     else:
-        label = context_path.split(">")[-1]
+        raise TypeError()
 
     node_type = root_ast_to_node_type(context.root_ast)
 
