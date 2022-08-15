@@ -6,7 +6,7 @@ import networkx as nx
 
 from byparse.abc import NodeType, EdgeType
 from byparse.utils import link_path_to_name, root_ast_to_node_type
-from byparse.path_resolvers.imports import resolve_aliases_paths, resolve_import_ast_paths
+from byparse.path_resolvers.imports import resolve_aliases_paths
 from byparse.path_resolvers.calls import resolve_call
 from byparse.logging_utils import get_logger
 
@@ -92,7 +92,7 @@ def add_context_calls_edges(
             LOGGER.warning("Could not find call path for %s", call_name)
             continue
 
-        if project.path.parts[0] in call_path:
+        if project.path.parts[0] in str(call_path):
             call_path = str(Path(call_path).relative_to(project.path))
 
         if str(call_path) not in graph.nodes():
