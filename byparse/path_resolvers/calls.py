@@ -51,19 +51,22 @@ def resolve_lib_call(
     call_true_path: Path, call_name: str, with_deps=False
 ) -> Tuple[Optional[Path], NodeType]:
     node_type = NodeType.LIBRAIRY.name
+
     if not with_deps:
         return None, node_type
 
     if "__init__.py" in call_true_path.parts or "__main__.py" in call_true_path.parts:
         call_true_path = call_true_path.parent
 
-    call_true_path = call_true_path.parts[-1].split(".py")[0]
+    lib_index = call_true_path.parts.index("site-packages")
+    call_true_path = Path(*call_true_path.parts[lib_index + 1 :])
     if with_deps == "group":
-        call_path = call_true_path
+        call_path = Path(call_true_path.parts[0])
     else:
-        call_path = link_path_to_name(call_true_path, call_name.split(".")[-1])
+        call_end = call_name.split(".")[-1]
+        call_path = link_path_to_name(call_true_path, call_end)
 
-    return call_path, node_type
+    return Path(call_path), node_type
 
 
 def resolve_import_path_chain(
@@ -138,7 +141,7 @@ def resolve_call(
         call_true_path: Path = local_aliases_paths[alias]
 
         # Filter libs
-        if "lib" in call_true_path.parts:
+        if "site-package" in call_true_path.parts:
             return resolve_lib_call(call_true_path, call_name, with_deps)
 
         call_path, call_type = resolve_import_path_chain(

@@ -101,3 +101,39 @@ class TestGetLocalChain:
         call_chain, call_end = get_local_known_chain(call_name, local_used_names)
         check.equal(call_chain, "module.Class.func")
         check.equal(call_end, "")
+
+
+class TestResolveLibCall:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.call_path = Path(
+            "venv", "Lib", "site-packages", "numpy", "core", "__init__.py"
+        )
+
+    def test_resolve_lib_call_with_deps(self):
+
+        call_name = "np.array"
+        call_path, node_type = resolve_lib_call(
+            self.call_path, call_name, with_deps=True
+        )
+
+        check.equal(call_path, Path("numpy", "core>array"))
+        check.equal(node_type, NodeType.LIBRAIRY.name)
+
+    def test_resolve_lib_call_group_deps(self):
+        call_name = "np.array"
+        call_path, node_type = resolve_lib_call(
+            self.call_path, call_name, with_deps="group"
+        )
+
+        check.equal(call_path, Path("numpy"))
+        check.equal(node_type, NodeType.LIBRAIRY.name)
+
+    def test_resolve_lib_call_no_deps(self):
+        call_name = "np.array"
+        call_path, node_type = resolve_lib_call(
+            self.call_path, call_name, with_deps=False
+        )
+
+        check.is_none(call_path)
+        check.equal(node_type, NodeType.LIBRAIRY.name)
