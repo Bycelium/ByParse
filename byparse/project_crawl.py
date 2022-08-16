@@ -32,6 +32,11 @@ class ModuleCrawler:
         # Crawl ast
         self.context = AstContextCrawler(module_ast)
 
+    def __str__(self) -> str:
+        return (
+            f"ModuleCrawler({self.path.relative_to(self.root)}, context={self.context})"
+        )
+
 
 class ProjectCrawler:
     modules: Dict[Path, ModuleCrawler]
