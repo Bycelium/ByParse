@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 from byparse.abc import NodeType
 from byparse.utils import root_ast_to_node_type, link_path_to_name
-from byparse.path_resolvers.imports import resolve_import_ast_paths
+from byparse.path_resolvers.imports import (
+    resolve_import_ast_alias_path,
+    resolve_import_ast_paths,
+)
 from byparse.logging_utils import get_logger
 
 if TYPE_CHECKING:
@@ -30,9 +33,14 @@ def resolve_self_call(
     return call_path, call_type
 
 
-def get_call_chain(call_name: str, local_used_names: List[str]):
+def get_call_chain(
+    call_name: str,
+    local_used_names: List[str],
+    chain_level: Optional[int] = None,
+):
     call_parts = call_name.split(".")
-    chain_level = get_chain_known_level(call_parts, list(local_used_names))
+    if chain_level is None:
+        chain_level = get_chain_known_level(call_parts, list(local_used_names))
     if chain_level is not None:
         reverser_call_parts = list(reversed(call_parts))
         call_chain = ".".join(reversed(reverser_call_parts[chain_level:]))
@@ -138,7 +146,6 @@ def resolve_call(
     call_chain, call_end, call_parts, chain_level = get_call_chain(
         call_name, list(local_used_names.keys())
     )
-    print(call_chain, call_end, call_parts, chain_level, list(local_used_names.keys()))
 
     if call_chain in local_used_names:
         # Function or Class imported
@@ -161,6 +168,37 @@ def resolve_call(
             return call_path.relative_to(project_path), call_type
         else:
             # Try with other call_parts
-            pass
+            level = chain_level - 1
+            while call_path is None and level >= 0:
+                call_chain, call_end, call_parts, chain_level = get_call_chain(
+                    call_name, list(local_used_names.keys()), level
+                )
+
+                rel_context_path = context_path.relative_to(project_path)
+                if (
+                    "__main__.py" in rel_context_path.parts
+                    or "__init__.py" in rel_context_path.parts
+                ):
+                    rel_context_path = rel_context_path.parent
+
+                full_name = ".".join(list(rel_context_path.parts) + [call_chain])
+                alias: ast.alias = ast.alias(name=full_name)
+
+                call_true_path: Path = resolve_import_ast_alias_path(
+                    alias, project_path
+                )
+
+                call_path, call_type = resolve_import_path_chain(
+                    call_name,
+                    project_modules,
+                    alias.name,
+                    call_end,
+                    call_true_path,
+                    project_path,
+                )
+                level -= 1
+
+            if call_path is not None:
+                return call_path.relative_to(project_path), call_type
 
     return None, None
