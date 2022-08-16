@@ -32,9 +32,9 @@ def resolve_self_call(
 
 def get_local_known_chain(call_name: str, local_used_names: List[str]):
     call_parts = call_name.split(".")
-    level = 0
     call_chain = call_name
     call_end = ""
+    level = 0
     while call_chain not in local_used_names and level < len(call_parts):
         # Look for part of module chain in local used names in decreasing lenght of chain
         call_chain = ".".join(call_parts[: 1 - level])

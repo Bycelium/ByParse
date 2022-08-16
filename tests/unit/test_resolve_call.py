@@ -57,3 +57,47 @@ class TestResolveCallPath:
 
         check.equal(call_path.relative_to(self.project_root), Path("context>MyClass"))
         check.equal(call_type, NodeType.CLASS.name)
+
+
+class TestGetLocalChain:
+    def test_single_chain(self):
+        call_name = "func"
+        local_used_names = ["func"]
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.equal(call_chain, "func")
+        check.equal(call_end, "")
+
+    def test_single_chain_not_found(self):
+        call_name = "func"
+        local_used_names = []
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.is_none(call_chain)
+        check.is_none(call_end)
+
+    def test_start_chain(self):
+        call_name = "module.Class.func"
+        local_used_names = ["module"]
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.equal(call_chain, "module")
+        check.equal(call_end, "Class.func")
+
+    def test_middle_chain(self):
+        call_name = "module.Class.func"
+        local_used_names = ["module.Class"]
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.equal(call_chain, "module.Class")
+        check.equal(call_end, "func")
+
+    def test_middle_only_not_found(self):
+        call_name = "module.Class.func"
+        local_used_names = ["Class"]
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.is_none(call_chain)
+        check.is_none(call_end)
+
+    def test_end_chain(self):
+        call_name = "module.Class.func"
+        local_used_names = ["module.Class.func"]
+        call_chain, call_end = get_local_known_chain(call_name, local_used_names)
+        check.equal(call_chain, "module.Class.func")
+        check.equal(call_end, "")
