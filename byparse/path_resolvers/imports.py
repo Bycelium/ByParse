@@ -72,9 +72,9 @@ def resolve_import_ast_alias_path(
         if module is not None:
             warning_msg += f" at {module}"
         LOGGER.warning("Could not find a reference for alias %s", warning_msg)
-        return Path(f"lib/not-found/{alias.name}")
+        return Path(f"Lib/site-packages/not-found/{alias.name}")
     if spec.origin == "built-in" or spec.origin is None:
-        return Path(f"lib/built-in/{alias.name}")
+        return Path(f"Lib/site-packages/built-in/{alias.name}")
     return Path(spec.origin)
 
 
