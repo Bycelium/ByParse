@@ -66,7 +66,11 @@ def resolve_import_ast_alias_path(
             return path
 
     # For installed packages
-    spec = find_spec(alias.name)
+    try:
+        spec = find_spec(alias.name)
+    except ModuleNotFoundError:
+        spec = None
+
     if spec is None:
         warning_msg = f"{alias.name}"
         if module is not None:

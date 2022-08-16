@@ -70,7 +70,10 @@ def resolve_lib_call(
     if "__init__.py" in call_true_path.parts or "__main__.py" in call_true_path.parts:
         call_true_path = call_true_path.parent
 
-    lib_index = call_true_path.parts.index("site-packages")
+    try:
+        lib_index = call_true_path.parts.index("site-packages")
+    except ValueError:
+        lib_index = call_true_path.parts.index("lib")
     call_true_path = Path(*call_true_path.parts[lib_index + 1 :])
     if with_deps == "group":
         call_path = Path(call_true_path.parts[0])
@@ -153,7 +156,7 @@ def resolve_call(
         call_true_path: Path = local_aliases_paths[alias]
 
         # Filter libs
-        if "site-packages" in call_true_path.parts:
+        if "site-packages" in call_true_path.parts or "lib" in call_true_path.parts:
             return resolve_lib_call(call_true_path, call_name, with_deps)
 
         call_path, call_type = resolve_import_path_chain(
