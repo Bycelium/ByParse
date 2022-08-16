@@ -30,21 +30,25 @@ def resolve_self_call(
     return call_path, call_type
 
 
-def get_local_known_chain(call_name: str, local_used_names: List[str]):
+def get_call_chain(call_name: str, local_used_names: List[str]):
     call_parts = call_name.split(".")
-    call_chain = call_name
-    call_end = ""
-    level = 0
-    while call_chain not in local_used_names and level < len(call_parts):
-        # Look for part of module chain in local used names in decreasing lenght of chain
-        call_chain = ".".join(call_parts[: 1 - level])
-        call_end = ".".join(call_parts[1 - level :])
-        level += 1
-
-    if call_chain in local_used_names:
-        return call_chain, call_end
+    chain_level = get_chain_known_level(call_parts, list(local_used_names))
+    if chain_level is not None:
+        reverser_call_parts = list(reversed(call_parts))
+        call_chain = ".".join(reversed(reverser_call_parts[chain_level:]))
+        call_end = ".".join(reversed(reverser_call_parts[:chain_level]))
+        return call_chain, call_end, call_parts, chain_level
     else:
-        return None, None
+        return None, None, call_parts, None
+
+
+def get_chain_known_level(call_parts: List[str], local_used_names: List[str]):
+    reversed_call_parts = list(reversed(call_parts))
+    for level in range(len(reversed_call_parts)):
+        # Look for part of module chain in local used names in decreasing lenght of chain
+        call_chain = ".".join(reversed(reversed_call_parts[level:]))
+        if call_chain in local_used_names:
+            return level
 
 
 def resolve_lib_call(
@@ -131,9 +135,10 @@ def resolve_call(
     if call_path is not None:
         return call_path.relative_to(project_path), call_type
 
-    call_chain, call_end = get_local_known_chain(
+    call_chain, call_end, call_parts, chain_level = get_call_chain(
         call_name, list(local_used_names.keys())
     )
+    print(call_chain, call_end, call_parts, chain_level, list(local_used_names.keys()))
 
     if call_chain in local_used_names:
         # Function or Class imported
@@ -141,7 +146,7 @@ def resolve_call(
         call_true_path: Path = local_aliases_paths[alias]
 
         # Filter libs
-        if "site-package" in call_true_path.parts:
+        if "site-packages" in call_true_path.parts:
             return resolve_lib_call(call_true_path, call_name, with_deps)
 
         call_path, call_type = resolve_import_path_chain(
@@ -154,5 +159,8 @@ def resolve_call(
         )
         if call_path is not None:
             return call_path.relative_to(project_path), call_type
+        else:
+            # Try with other call_parts
+            pass
 
     return None, None
