@@ -4,7 +4,7 @@ __pycache__/
 
 # C extensions
 *.so
-nodes.html
+
 # Distribution / packaging
 .Python
 build/
@@ -161,4 +161,6 @@ cython_debug/
 # VSCode
 .vscode
 
+# Custom
 examples/
+examples_graphs/

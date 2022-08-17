@@ -1,5 +1,6 @@
 import argparse
 from logging import DEBUG
+import os
 from pathlib import Path
 
 from byparse.visualisation import networkx_to_pyvis, color_context_graph
@@ -34,7 +35,11 @@ def main():
 
     net = networkx_to_pyvis(graph)
     net.toggle_physics(True)
-    output = args.output if args.output is not None else f"{Path(args.root).name}.html"
+    output = args.output
+    if args.output is None:
+        output = Path("examples_graphs", f"{Path(args.root).name}.html")
+        os.makedirs(output.parent, exist_ok=True)
+        output = str(output)
     net.show(output)
 
 
