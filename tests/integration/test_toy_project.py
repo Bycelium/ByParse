@@ -289,6 +289,16 @@ class TestToyProject:
                     "type": "CLASS",
                     "id": "package\\submodules\\submodule1.py>M1",
                 },
+                {
+                    "label": "M11",
+                    "type": "CLASS",
+                    "id": "package\\module1.py>M11",
+                },
+                {
+                    "label": "__str__",
+                    "type": "FUNCTION",
+                    "id": "package\\module1.py>M11>__str__",
+                },
                 {"label": "module2.py", "type": "FILE", "id": "package\\module2.py"},
                 {"label": "m2", "type": "FUNCTION", "id": "package\\module2.py>m2"},
                 {
@@ -379,6 +389,26 @@ class TestToyProject:
                     "type": "CALL",
                     "source": "package\\submodules\\submodule1.py>M1>m1meth",
                     "target": "package\\module1.py>m11",
+                },
+                {
+                    "type": "CALL",
+                    "source": "package\\submodules\\submodule1.py>M1",
+                    "target": "package\\module1.py>m11",
+                },
+                {
+                    "type": "INHERITANCE",
+                    "source": "package\\submodules\\submodule1.py>M1",
+                    "target": "package\\module1.py>M11",
+                },
+                {
+                    "type": "TYPEHINT",
+                    "source": "package\\module1.py>M11",
+                    "target": "package\\module1.py>m11",
+                },
+                {
+                    "type": "TYPEHINT",
+                    "source": "package\\module1.py>M11",
+                    "target": "package\\module1.py>m1",
                 },
                 {
                     "type": "CALL",
