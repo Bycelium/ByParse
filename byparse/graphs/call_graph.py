@@ -72,6 +72,43 @@ def add_context_calls_edges(
     local_aliases_paths.update(aliases_paths)
     local_used_names.update(used_names)
 
+    # Add inheritance for classes
+    if isinstance(context.root_ast, ast.ClassDef):
+        for base_name in [x.id for x in context.root_ast.bases]:
+            base_path, base_type = resolve_call(
+                base_name,
+                module.context,
+                module.path,
+                project.path,
+                project.modules,
+                local_used_names,
+                local_aliases_paths,
+            )
+            if str(base_path) not in graph.nodes():
+                graph.add_node(str(call_path), label=base_name, type=base_type)
+            graph.add_edge(
+                str(base_path), str(context_path), type=EdgeType.INHERITANCE.name
+            )
+
+    # Add type hints of arguments
+    if isinstance(context.root_ast, ast.FunctionDef):
+        annotations = [arg.annotation for arg in context.root_ast.args.args]
+        for name in filter(lambda x: isinstance(x, ast.Name), annotations):
+            name_path, name_type = resolve_call(
+                name.id,
+                module.context,
+                module.path,
+                project.path,
+                project.modules,
+                local_used_names,
+                local_aliases_paths,
+            )
+            if str(name_path) not in graph.nodes():
+                graph.add_node(str(name_path), label=name.id, type=name_type)
+            graph.add_edge(
+                str(name_path), str(context_path), type=EdgeType.TYPEHINT.name
+            )
+
     for call_name, _ in context.calls.items():
 
         # Ignore builtins calls

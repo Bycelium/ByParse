@@ -5,6 +5,8 @@ class EdgeType(Enum):
     PATH = auto()
     CONTEXT = auto()
     CALL = auto()
+    INHERITANCE = auto()
+    TYPEHINT = auto()
 
 
 class NodeType(Enum):
