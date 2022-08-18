@@ -64,6 +64,16 @@ class TestToyProject:
                     "id": "package\\submodules\\submodule1.py>M1",
                 },
                 {
+                    "label": "M11",
+                    "type": "CLASS",
+                    "id": "package\\module1.py>M11",
+                },
+                {
+                    "label": "__str__",
+                    "type": "FUNCTION",
+                    "id": "package\\module1.py>M11>__str__",
+                },
+                {
                     "label": "__init__",
                     "type": "FUNCTION",
                     "id": "package\\submodules\\submodule1.py>M1>__init__",
@@ -131,6 +141,16 @@ class TestToyProject:
                     "type": "CONTEXT",
                     "source": "package\\module1.py>m11",
                     "target": "package\\module1.py",
+                },
+                {
+                    "type": "CONTEXT",
+                    "source": "package\\module1.py>M11",
+                    "target": "package\\module1.py",
+                },
+                {
+                    "type": "CONTEXT",
+                    "source": "package\\module1.py>M11>__str__",
+                    "target": "package\\module1.py>M11",
                 },
                 {"type": "PATH", "source": "package\\module2.py", "target": "package"},
                 {
