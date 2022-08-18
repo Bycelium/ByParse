@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 import ast
 import networkx as nx
@@ -7,7 +7,7 @@ import networkx as nx
 from byparse.abc import NodeType, EdgeType
 from byparse.utils import link_path_to_name, root_ast_to_node_type
 from byparse.path_resolvers.imports import resolve_aliases_paths
-from byparse.path_resolvers.calls import resolve_call
+from byparse.path_resolvers.names import resolve_name
 from byparse.logging_utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -48,6 +48,20 @@ def add_context_node(
         graph.add_node(str(context_path), label=label, type=node_type)
 
 
+def asts_to_names(asts: List[ast.AST]):
+    annotations_names = []
+    for ast_elem in asts:
+        if ast_elem is None:
+            continue
+        elif isinstance(ast_elem, ast.Name):
+            annotations_names.append(ast_elem.id)
+        elif isinstance(ast_elem, ast.Constant):
+            annotations_names.append(ast_elem.value)
+        else:
+            raise TypeError(f"Unsupported annotation type: {type(ast_elem)}")
+    return annotations_names
+
+
 def add_context_calls_edges(
     graph: nx.DiGraph,
     project: "ProjectCrawler",
@@ -58,13 +72,10 @@ def add_context_calls_edges(
     used_names: Dict[str, "ast.alias"] = None,
 ):
 
+    # Add local imports
     aliases_paths = {} if aliases_paths is None else aliases_paths
     used_names = {} if used_names is None else used_names
 
-    # Add context node
-    add_context_node(graph, context_path, context)
-
-    # Add local imports
     local_aliases_paths, local_used_names = resolve_aliases_paths(
         context.imports, str(module.root)
     )
@@ -72,51 +83,9 @@ def add_context_calls_edges(
     local_aliases_paths.update(aliases_paths)
     local_used_names.update(used_names)
 
-    # Add inheritance for classes
-    if isinstance(context.root_ast, ast.ClassDef):
-        for base_name in [x.id for x in context.root_ast.bases]:
-            base_path, base_type = resolve_call(
-                base_name,
-                module.context,
-                module.path,
-                project.path,
-                project.modules,
-                local_used_names,
-                local_aliases_paths,
-            )
-            if str(base_path) not in graph.nodes():
-                graph.add_node(str(call_path), label=base_name, type=base_type)
-            graph.add_edge(
-                str(base_path), str(context_path), type=EdgeType.INHERITANCE.name
-            )
-
-    # Add type hints of arguments
-    if isinstance(context.root_ast, ast.FunctionDef):
-        annotations = [arg.annotation for arg in context.root_ast.args.args]
-        for name in filter(lambda x: isinstance(x, ast.Name), annotations):
-            name_path, name_type = resolve_call(
-                name.id,
-                module.context,
-                module.path,
-                project.path,
-                project.modules,
-                local_used_names,
-                local_aliases_paths,
-            )
-            if str(name_path) not in graph.nodes():
-                graph.add_node(str(name_path), label=name.id, type=name_type)
-            graph.add_edge(
-                str(name_path), str(context_path), type=EdgeType.TYPEHINT.name
-            )
-
-    for call_name, _ in context.calls.items():
-
-        # Ignore builtins calls
-        if call_name in __builtins__:
-            continue
-
-        call_path, call_type = resolve_call(
-            call_name,
+    def add_namelink_edge(name: str, edge_type: EdgeType):
+        name_path, name_type = resolve_name(
+            name,
             module.context,
             module.path,
             project.path,
@@ -125,19 +94,46 @@ def add_context_calls_edges(
             local_aliases_paths,
         )
 
-        if not call_path:
-            LOGGER.warning("Could not find call path for %s", call_name)
-            continue
+        if not name_path:
+            LOGGER.warning("Could not find path for name: %s", name)
+            return
 
-        if project.path.parts[0] in str(call_path):
-            call_path = str(Path(call_path).relative_to(project.path))
+        if project.path.parts[0] in str(name_path):
+            name_path = str(Path(name_path).relative_to(project.path))
 
-        if str(call_path) not in graph.nodes():
-            graph.add_node(
-                str(call_path), label=call_name.split(".")[-1], type=call_type
-            )
-        graph.add_edge(str(call_path), str(context_path), type=EdgeType.CALL.name)
+        if str(name_path) not in graph.nodes():
+            graph.add_node(str(name_path), label=name.split(".")[-1], type=name_type)
+        graph.add_edge(str(name_path), str(context_path), type=edge_type.name)
 
+    def add_calls_edges():
+        for call_name, _ in context.calls.items():
+
+            # Ignore builtins calls
+            if call_name in __builtins__:
+                continue
+
+            add_namelink_edge(call_name, EdgeType.CALL)
+
+    def add_inheritance_edges():
+        for base_name in asts_to_names(context.root_ast.bases):
+            add_namelink_edge(base_name, EdgeType.INHERITANCE)
+
+    def add_typehints_edges():
+        for name in asts_to_names([x.annotation for x in context.root_ast.args.args]):
+            add_namelink_edge(name, EdgeType.TYPEHINT)
+
+    # Add context node
+    add_context_node(graph, context_path, context)
+
+    if isinstance(context.root_ast, ast.ClassDef):
+        add_inheritance_edges()
+
+    if isinstance(context.root_ast, ast.FunctionDef):
+        add_typehints_edges()
+
+    add_calls_edges()
+
+    # Recurse on subcontexts (functions then classes)
     for fname, func_context in context.functions.items():
         fpath = link_path_to_name(context_path, fname)
         add_context_calls_edges(

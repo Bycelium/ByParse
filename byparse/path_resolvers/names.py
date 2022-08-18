@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-def resolve_self_call(
+def resolve_same_module_name(
     call_name: str,
     context: "AstContextCrawler",
     context_path: Path,
@@ -59,7 +59,7 @@ def get_chain_known_level(call_parts: List[str], local_used_names: List[str]):
             return level
 
 
-def resolve_lib_call(
+def resolve_lib_name(
     call_true_path: Path, call_name: str, with_deps=False
 ) -> Tuple[Optional[Path], NodeType]:
     node_type = NodeType.LIBRAIRY.name
@@ -131,8 +131,8 @@ def resolve_import_path_chain(
     return call_path, call_type
 
 
-def resolve_call(
-    call_name: str,
+def resolve_name(
+    name: str,
     context: "AstContextCrawler",
     context_path: Path,
     project_path: Path,
@@ -142,39 +142,39 @@ def resolve_call(
     with_deps=False,
 ) -> Tuple[Optional[Path], NodeType]:
 
-    call_path, call_type = resolve_self_call(call_name, context, context_path)
-    if call_path is not None:
-        return call_path.relative_to(project_path), call_type
+    name_path, name_type = resolve_same_module_name(name, context, context_path)
+    if name_path is not None:
+        return name_path.relative_to(project_path), name_type
 
-    call_chain, call_end, call_parts, chain_level = get_call_chain(
-        call_name, list(local_used_names.keys())
+    chain, end, _, chain_level = get_call_chain(
+        name, list(local_used_names.keys())
     )
 
-    if call_chain in local_used_names:
+    if chain in local_used_names:
         # Function or Class imported
-        alias: ast.alias = local_used_names[call_chain]
-        call_true_path: Path = local_aliases_paths[alias]
+        alias: ast.alias = local_used_names[chain]
+        name_true_path: Path = local_aliases_paths[alias]
 
         # Filter libs
-        if "site-packages" in call_true_path.parts or "lib" in call_true_path.parts:
-            return resolve_lib_call(call_true_path, call_name, with_deps)
+        if "site-packages" in name_true_path.parts or "lib" in name_true_path.parts:
+            return resolve_lib_name(name_true_path, name, with_deps)
 
-        call_path, call_type = resolve_import_path_chain(
-            call_name,
+        name_path, name_type = resolve_import_path_chain(
+            name,
             project_modules,
             alias.name,
-            call_end,
-            call_true_path,
+            end,
+            name_true_path,
             project_path,
         )
-        if call_path is not None:
-            return call_path.relative_to(project_path), call_type
+        if name_path is not None:
+            return name_path.relative_to(project_path), name_type
         else:
             # Try with other call_parts
             level = chain_level - 1
-            while call_path is None and level >= 0:
-                call_chain, call_end, call_parts, chain_level = get_call_chain(
-                    call_name, list(local_used_names.keys()), level
+            while name_path is None and level >= 0:
+                chain, end, _, chain_level = get_call_chain(
+                    name, list(local_used_names.keys()), level
                 )
 
                 rel_context_path = context_path.relative_to(project_path)
@@ -184,24 +184,24 @@ def resolve_call(
                 ):
                     rel_context_path = rel_context_path.parent
 
-                full_name = ".".join(list(rel_context_path.parts) + [call_chain])
+                full_name = ".".join(list(rel_context_path.parts) + [chain])
                 alias: ast.alias = ast.alias(name=full_name)
 
-                call_true_path: Path = resolve_import_ast_alias_path(
+                name_true_path: Path = resolve_import_ast_alias_path(
                     alias, project_path
                 )
 
-                call_path, call_type = resolve_import_path_chain(
-                    call_name,
+                name_path, name_type = resolve_import_path_chain(
+                    name,
                     project_modules,
                     alias.name,
-                    call_end,
-                    call_true_path,
+                    end,
+                    name_true_path,
                     project_path,
                 )
                 level -= 1
 
-            if call_path is not None:
-                return call_path.relative_to(project_path), call_type
+            if name_path is not None:
+                return name_path.relative_to(project_path), name_type
 
     return None, None

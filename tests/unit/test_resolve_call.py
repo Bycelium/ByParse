@@ -4,12 +4,12 @@ from pathlib import Path
 import pytest
 import pytest_check as check
 
-from byparse.path_resolvers.calls import (
+from byparse.path_resolvers.names import (
     get_chain_known_level,
-    resolve_call,
-    resolve_self_call,
+    resolve_name,
+    resolve_same_module_name,
     resolve_import_path_chain,
-    resolve_lib_call,
+    resolve_lib_name,
     get_call_chain,
 )
 from byparse.project_crawl import AstContextCrawler
@@ -35,7 +35,9 @@ class TestResolveCallPath:
         context = AstContextCrawler(module_ast)
         context_path = self.project_root / Path("context")
 
-        call_path, call_type = resolve_self_call(call_name, context, context_path)
+        call_path, call_type = resolve_same_module_name(
+            call_name, context, context_path
+        )
 
         check.equal(call_path.relative_to(self.project_root), Path("context>func"))
         check.equal(call_type, NodeType.FUNCTION.name)
@@ -54,7 +56,9 @@ class TestResolveCallPath:
         context = AstContextCrawler(module_ast)
         context_path = self.project_root / Path("context")
 
-        call_path, call_type = resolve_self_call(call_name, context, context_path)
+        call_path, call_type = resolve_same_module_name(
+            call_name, context, context_path
+        )
 
         check.equal(call_path.relative_to(self.project_root), Path("context>MyClass"))
         check.equal(call_type, NodeType.CLASS.name)
@@ -152,7 +156,7 @@ class TestResolveLibCall:
     def test_resolve_lib_call_with_deps(self):
 
         call_name = "np.array"
-        call_path, node_type = resolve_lib_call(
+        call_path, node_type = resolve_lib_name(
             self.call_path, call_name, with_deps=True
         )
 
@@ -161,7 +165,7 @@ class TestResolveLibCall:
 
     def test_resolve_lib_call_group_deps(self):
         call_name = "np.array"
-        call_path, node_type = resolve_lib_call(
+        call_path, node_type = resolve_lib_name(
             self.call_path, call_name, with_deps="group"
         )
 
@@ -170,7 +174,7 @@ class TestResolveLibCall:
 
     def test_resolve_lib_call_no_deps(self):
         call_name = "np.array"
-        call_path, node_type = resolve_lib_call(
+        call_path, node_type = resolve_lib_name(
             self.call_path, call_name, with_deps=False
         )
 
