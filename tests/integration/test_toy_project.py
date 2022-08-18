@@ -392,6 +392,11 @@ class TestToyProject:
                 },
                 {
                     "type": "CALL",
+                    "source": "package\\submodules\\submodule1.py>M1>m1meth",
+                    "target": "package\\module1.py>M11>__str__",
+                },
+                {
+                    "type": "CALL",
                     "source": "package\\submodules\\submodule1.py>M1",
                     "target": "package\\module1.py>m11",
                 },
