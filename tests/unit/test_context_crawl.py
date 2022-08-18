@@ -46,7 +46,7 @@ class TestAstContextCrawler:
         expected_imports_names = ("alpha", "theta", "b", "g", "delta")
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check.equal(set(module.imports.keys()), set(expected_imports_names))
 
     def test_calls(self):
@@ -61,7 +61,7 @@ class TestAstContextCrawler:
         expected_call_names = ("call_1", "call_2")
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check.equal(set(module.calls.keys()), set(expected_call_names))
 
     def test_functions_context(self):
@@ -95,7 +95,7 @@ class TestAstContextCrawler:
         }
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check_expected_subcontexts(module, expected_contexts)
 
     def test_classes_context(self):
@@ -128,7 +128,7 @@ class TestAstContextCrawler:
         }
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check_expected_subcontexts(module, expected_contexts_calls)
 
     def test_context_calls(self):
@@ -186,7 +186,7 @@ class TestAstContextCrawler:
         }
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check_expected_subcontexts(module, expected_contexts_calls)
 
     def test_context_imports(self):
@@ -242,5 +242,5 @@ class TestAstContextCrawler:
         }
 
         module_ast = ast.parse(source)
-        module = AstContextCrawler(module_ast)
+        module = AstContextCrawler(module_ast, path=".")
         check_expected_subcontexts(module, expected_contexts_calls)

@@ -1,11 +1,13 @@
+from pathlib import Path
 from typing import Dict, Optional, Union
 import ast
 
-from byparse.utils import ast_call_name
+from byparse.utils import ast_call_name, link_path_to_name
 
 
 class AstContextCrawler:
     root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
+    path: Path
 
     functions: Dict[ast.FunctionDef, "AstContextCrawler"]
     classes: Dict[ast.ClassDef, "AstContextCrawler"]
@@ -14,9 +16,20 @@ class AstContextCrawler:
     calls: Dict[str, ast.Call]
 
     def __init__(
-        self, root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef]
+        self,
+        root_ast: Union[ast.Module, ast.FunctionDef, ast.ClassDef],
+        parent: Optional["AstContextCrawler"] = None,
+        path: Optional[Path] = None,
     ) -> None:
         self.root_ast = root_ast
+
+        if isinstance(root_ast, ast.Module) and path is None:
+            raise ValueError("Module contexts must be given a path")
+
+        self.path = path
+        if self.path is None and parent is not None:
+            self.path = Path(link_path_to_name(parent.path, self.root_ast.name))
+
         self.imports = {}
         self.calls = {}
         self.functions = {}
@@ -76,9 +89,13 @@ class AstContextCrawler:
             for v in ast_element.args:
                 self.crawl(v, context)
         elif isinstance(ast_element, ast.FunctionDef):
-            self.functions[ast_element.name] = AstContextCrawler(ast_element)
+            self.functions[ast_element.name] = AstContextCrawler(
+                ast_element, parent=context
+            )
         elif isinstance(ast_element, ast.ClassDef):
-            self.classes[ast_element.name] = AstContextCrawler(ast_element)
+            self.classes[ast_element.name] = AstContextCrawler(
+                ast_element, parent=context
+            )
         elif isinstance(
             ast_element,
             (
@@ -148,8 +165,8 @@ class AstContextCrawler:
 
     def __repr__(self) -> str:
         ast_elements = ("functions", "classes", "imports", "calls")
-
-        elements_to_print = []
+        root_name = self.root_ast.name if hasattr(self.root_ast, "name") else "Module"
+        elements_to_print = [str(self.path), root_name]
         for key in ast_elements:
             values = getattr(self, key)
             if values:
@@ -170,5 +187,4 @@ class AstContextCrawler:
                 elements_to_print.append(f"{key.capitalize()}({print_values})")
 
         content = ", ".join(elements_to_print)
-        root_name = self.root_ast.name if hasattr(self.root_ast, "name") else "Module"
-        return f"AstContext({root_name}, {content})"
+        return f"AstContext({content})"

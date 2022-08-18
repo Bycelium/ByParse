@@ -30,7 +30,7 @@ class ModuleCrawler:
         module_ast = ast.parse(source=self.source, filename=self.path.name)
 
         # Crawl ast
-        self.context = AstContextCrawler(module_ast)
+        self.context = AstContextCrawler(module_ast, path=self.path)
 
     def __str__(self) -> str:
         return (

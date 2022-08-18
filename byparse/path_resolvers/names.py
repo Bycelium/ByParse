@@ -19,17 +19,16 @@ LOGGER = get_logger(__name__)
 
 
 def resolve_same_module_name(
-    call_name: str,
-    context: "AstContextCrawler",
-    context_path: Path,
+    name: str,
+    known_contexts: Dict[str, "AstContextCrawler"],
 ) -> Tuple[Optional[Path], Optional[NodeType]]:
     call_path = None
     call_type = None
-    if call_name in context.known_names:
+    if name in known_contexts:
         # Function or Class in same file
-        other_context = context.known_names[call_name]
+        other_context = known_contexts[name]
         call_type = root_ast_to_node_type(other_context.root_ast)
-        call_path = Path(link_path_to_name(context_path, other_context.root_ast.name))
+        call_path = other_context.path
     return call_path, call_type
 
 
@@ -133,22 +132,20 @@ def resolve_import_path_chain(
 
 def resolve_name(
     name: str,
-    context: "AstContextCrawler",
     context_path: Path,
     project_path: Path,
     project_modules: Dict[Path, "ModuleCrawler"],
+    local_known_contexts: Dict[str, "AstContextCrawler"],
     local_used_names: Dict[str, "ast.alias"],
     local_aliases_paths: Dict["ast.alias", Path],
     with_deps=False,
 ) -> Tuple[Optional[Path], NodeType]:
 
-    name_path, name_type = resolve_same_module_name(name, context, context_path)
+    name_path, name_type = resolve_same_module_name(name, local_known_contexts)
     if name_path is not None:
         return name_path.relative_to(project_path), name_type
 
-    chain, end, _, chain_level = get_call_chain(
-        name, list(local_used_names.keys())
-    )
+    chain, end, _, chain_level = get_call_chain(name, list(local_used_names.keys()))
 
     if chain in local_used_names:
         # Function or Class imported

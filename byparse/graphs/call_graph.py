@@ -70,12 +70,12 @@ def add_context_calls_edges(
     context_path: Union[Path, str],
     aliases_paths: Dict["ast.alias", Path] = None,
     used_names: Dict[str, "ast.alias"] = None,
+    known_contexts: Dict[str, "AstContextCrawler"] = None,
 ):
 
     # Add local imports
     aliases_paths = {} if aliases_paths is None else aliases_paths
     used_names = {} if used_names is None else used_names
-
     local_aliases_paths, local_used_names = resolve_aliases_paths(
         context.imports, str(module.root)
     )
@@ -83,13 +83,18 @@ def add_context_calls_edges(
     local_aliases_paths.update(aliases_paths)
     local_used_names.update(used_names)
 
+    known_contexts = {} if known_contexts is None else known_contexts
+    local_known_contexts = module.context.known_names.copy()
+    local_known_contexts.update(context.known_names)
+    local_known_contexts.update(known_contexts)
+
     def add_namelink_edge(name: str, edge_type: EdgeType):
         name_path, name_type = resolve_name(
             name,
-            module.context,
             module.path,
             project.path,
             project.modules,
+            local_known_contexts,
             local_used_names,
             local_aliases_paths,
         )
@@ -133,27 +138,15 @@ def add_context_calls_edges(
 
     add_calls_edges()
 
-    # Recurse on subcontexts (functions then classes)
-    for fname, func_context in context.functions.items():
-        fpath = link_path_to_name(context_path, fname)
+    # Recurse on subcontexts (functions & classes)
+    for subcontext_name, subcontext in context.known_names.items():
+        subpath = link_path_to_name(context_path, subcontext_name)
         add_context_calls_edges(
-            graph,
-            project,
-            module,
-            func_context,
-            fpath,
-            local_aliases_paths,
-            local_used_names,
-        )
-
-    for cname, class_context in context.classes.items():
-        cpath = link_path_to_name(context_path, cname)
-        add_context_calls_edges(
-            graph,
-            project,
-            module,
-            class_context,
-            cpath,
-            local_aliases_paths,
-            local_used_names,
+            graph=graph,
+            project=project,
+            module=module,
+            context=subcontext,
+            context_path=subpath,
+            aliases_paths=local_aliases_paths,
+            used_names=local_used_names,
         )

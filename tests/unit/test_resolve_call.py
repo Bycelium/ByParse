@@ -31,13 +31,11 @@ class TestResolveCallPath:
             )
         )
 
+        path = self.project_root / Path("context")
         module_ast = ast.parse(source=source)
-        context = AstContextCrawler(module_ast)
-        context_path = self.project_root / Path("context")
+        context = AstContextCrawler(module_ast, path=path)
 
-        call_path, call_type = resolve_same_module_name(
-            call_name, context, context_path
-        )
+        call_path, call_type = resolve_same_module_name(call_name, context.known_names)
 
         check.equal(call_path.relative_to(self.project_root), Path("context>func"))
         check.equal(call_type, NodeType.FUNCTION.name)
@@ -52,13 +50,10 @@ class TestResolveCallPath:
             )
         )
 
+        path = self.project_root / Path("context")
         module_ast = ast.parse(source=source)
-        context = AstContextCrawler(module_ast)
-        context_path = self.project_root / Path("context")
-
-        call_path, call_type = resolve_same_module_name(
-            call_name, context, context_path
-        )
+        context = AstContextCrawler(module_ast, path=path)
+        call_path, call_type = resolve_same_module_name(call_name, context.known_names)
 
         check.equal(call_path.relative_to(self.project_root), Path("context>MyClass"))
         check.equal(call_type, NodeType.CLASS.name)
