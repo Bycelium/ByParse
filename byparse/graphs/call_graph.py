@@ -125,6 +125,11 @@ def add_context_calls_edges(
 
     def add_typehints_edges():
         for name in asts_to_names([x.annotation for x in context.root_ast.args.args]):
+
+            # Ignore builtins type hints
+            if name in __builtins__:
+                continue
+
             add_namelink_edge(name, EdgeType.TYPEHINT)
 
     # Add context node
