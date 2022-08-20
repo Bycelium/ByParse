@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import os
 import ast
@@ -41,17 +41,20 @@ class ModuleCrawler:
 class ProjectCrawler:
     modules: Dict[Path, ModuleCrawler]
 
-    def __init__(self, project_path: str) -> None:
+    def __init__(self, project_path: str, exclude: Optional[List[str]] = None) -> None:
         self.path = Path(project_path)
-        self.modules = self.parse_project()
+        self.modules = self.parse_project(exclude)
 
-    def parse_project(self) -> Dict[Path, ModuleCrawler]:
-        project_paths = os.walk(self.path)
+    def parse_project(
+        self, exclude: Optional[List[str]] = None
+    ) -> Dict[Path, ModuleCrawler]:
         modules_asts = {}
-        for dirpath, _, filenames in project_paths:
-            for filename in filenames:
+        for root, dirs, files in os.walk(self.path, topdown=True):
+            if exclude is not None:
+                dirs[:] = [d for d in dirs if d not in exclude]
+            for filename in files:
                 if filename.endswith(".py"):
-                    filepath = Path(dirpath) / Path(filename)
+                    filepath = Path(root) / Path(filename)
                     modules_asts[filepath.relative_to(self.path)] = ModuleCrawler(
                         filepath, root=self.path
                     )

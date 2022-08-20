@@ -22,13 +22,19 @@ def cli_parser():
         help="Output of the html graph.",
         default=None,
     )
+    parser.add_argument(
+        "--exclude",
+        "-x",
+        help="Ignored folders.",
+        default=None,
+    )
     return parser.parse_args()
 
 
 def main():
     args = cli_parser()
     init_logger(log_level=DEBUG, package_name=__package__)
-    project = ProjectCrawler(args.root)
+    project = ProjectCrawler(args.root, exclude=args.exclude)
     graph = project.build_contexts_graph()
     graph = project.build_call_graph(graph)
     color_context_graph(graph)
