@@ -145,26 +145,12 @@ let addToHistory = function( constraintType, nodeIds, constraintInfo) {
     cell2.innerHTML = label;
     cell3.innerHTML = "x: "+constraintInfo.x+" y: "+constraintInfo.y;
   }
-  else if(constraintType == 'Alignment'){
-    let nodeList = "";
-    nodeIds.forEach(function(nodeId, index){
-      let label = (cy.getElementById(nodeId).css('label') ? cy.getElementById(nodeId).css('label') : nodeId);
-      if(label.length > 15)
-        label = label.substring(0, 12).concat("...");      
-      if(index == 0)
-        nodeList += label;
-      else
-        nodeList += ' - ' + label;
-    });
-    cell2.innerHTML = nodeList;
-    cell3.innerHTML = constraintInfo;
-  }
   else{
     let nodeList = "";
     nodeIds.forEach(function(nodeId, index){
       let label = (cy.getElementById(nodeId).css('label') ? cy.getElementById(nodeId).css('label') : nodeId);
       if(label.length > 15)
-        label = label.substring(0, 12).concat("...");       
+        label = label.substring(0, 12).concat("...");      
       if(index == 0)
         nodeList += label;
       else
@@ -195,11 +181,6 @@ let addToHistory = function( constraintType, nodeIds, constraintInfo) {
   if(constraintType == 'Fixed')
     button.onclick = function(event){
       deleteRowElements(row, nodeIds);
-      instance.removeHighlights(collectionToHighlight.nodes());
-    };
-  else if(constraintType == 'Alignment')
-    button.onclick = function(event){
-      deleteRowElements(row, nodeIds, constraintInfo);
       instance.removeHighlights(collectionToHighlight.nodes());
     };
   else
@@ -253,10 +234,6 @@ let fillConstraintListTableFromConstraints = function () {
 let cy = window.cy = cytoscape({
   container: document.getElementById('cy'),
   ready: function(){              
-    let layoutUtilities = this.layoutUtilities({
-      desiredAspectRatio: this.width()/this.height()
-    });
-
     this.nodes().forEach(function(node){
       let size = Math.random()*40+30;
       node.css("width", size);
@@ -316,14 +293,14 @@ document.getElementById("openFile").addEventListener("click", function () {
 });
 
 $("body").on("change", "#inputFile", function (e, fileObject) {
-  var inputFile = this.files[0] || fileObject;
+  let inputFile = this.files[0] || fileObject;
 
   if (inputFile) {
-    var fileExtension = inputFile.name.split('.').pop();
-    var r = new FileReader();
+    let fileExtension = inputFile.name.split('.').pop();
+    let r = new FileReader();
     r.onload = function (e) {
       cy.remove(cy.elements());
-      var content = e.target.result;
+      let content = e.target.result;
       if (fileExtension == "graphml" || fileExtension == "xml") {
         cy.graphml({layoutBy: 'null'});
         cy.graphml(content);
@@ -347,15 +324,6 @@ $("body").on("change", "#inputFile", function (e, fileObject) {
         document.getElementById("fixedNodeX").value = Math.round(cy.getElementById(document.getElementById("nodeList").value).position("x"));
         document.getElementById("fixedNodeY").value = Math.round(cy.getElementById(document.getElementById("nodeList").value).position("y"));
       });
-      
-//      if (inputFile.name == "samples/sample1.graphml") {
-//        cy.nodes().forEach(function (node, i) {
-//          let width = [30, 70, 110];
-//          let size = width[i % 3];
-//          node.css("width", size);
-//          node.css("height", size);
-//        });
-//      }
        
     });
     r.readAsText(inputFile);
@@ -399,13 +367,13 @@ let updateGraphStyle = function () {
 };
 
 $("body").on("change", "#inputConstraint", function (e, fileObject) {
-  var inputFile = this.files[0] || fileObject;
+  let inputFile = this.files[0] || fileObject;
 
   if (inputFile) {
-    var fileExtension = inputFile.name.split('.').pop();
-    var r = new FileReader();
+    let fileExtension = inputFile.name.split('.').pop();
+    let r = new FileReader();
     r.onload = function (e) {
-      var content = e.target.result;
+      let content = e.target.result;
       if (fileExtension == "json") {
         constraints.fixedNodeConstraint = undefined;
         constraints.alignmentConstraint = undefined;
@@ -421,8 +389,7 @@ $("body").on("change", "#inputConstraint", function (e, fileObject) {
         fillConstraintListTableFromConstraints();
       }
     };
-    r.addEventListener('loadend', function () {          
-    });
+    r.addEventListener('loadend', function () {});
     r.readAsText(inputFile);
   } else {
     alert("Failed to load file");
@@ -436,12 +403,12 @@ document.getElementById("exportConstraint").addEventListener("click", function()
 });
 
 let download = function(filename, text) {
-    var pom = document.createElement('a');
+    let pom = document.createElement('a');
     pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
     pom.setAttribute('download', filename);
 
     if (document.createEvent) {
-        var event = document.createEvent('MouseEvents');
+        let event = document.createEvent('MouseEvents');
         event.initEvent('click', true, true);
         pom.dispatchEvent(event);
     }
@@ -450,48 +417,15 @@ let download = function(filename, text) {
     }
 };
 
-/*
-// SVG
-document.getElementById("saveAsSVG").addEventListener("click", function(){
-    let svgContent = cy.svg({scale: 1, full: true});
-    let blob = new Blob([svgContent], {type:"image/svg+xml;charset=utf-8"});
-    saveAs(blob, "graph.svg");
-});
-
-// see http://stackoverflow.com/questions/16245767/creating-a-blob-from-a-base64-string-in-javascript
-let b64toBlob = function(b64Data, contentType, sliceSize) {
-  contentType = contentType || '';
-  sliceSize = sliceSize || 512;
-
-  var byteCharacters = atob(b64Data);
-  var byteArrays = [];
-
-  for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-    var slice = byteCharacters.slice(offset, offset + sliceSize);
-
-    var byteNumbers = new Array(slice.length);
-    for (var i = 0; i < slice.length; i++) {
-      byteNumbers[i] = slice.charCodeAt(i);
-    }
-
-    var byteArray = new Uint8Array(byteNumbers);
-
-    byteArrays.push(byteArray);
-  }
-
-  var blob = new Blob(byteArrays, {type: contentType});
-  return blob;
-}
-*/
 
 document.getElementById("sample").addEventListener("change", function(){
   cy.startBatch();
   cy.elements().remove();
   cy.style().clear();
   
-  var selectionObject = document.getElementById("sample");
+  let selectionObject = document.getElementById("sample");
   
-  var selected = selectionObject.options[selectionObject.selectedIndex].index;
+  let selected = selectionObject.options[selectionObject.selectedIndex].index;
   if(selected == 0){
     cy.add(elements1);
     applyPostLoadOperations(selected);
@@ -598,7 +532,7 @@ let options = {
 
 // Randomize
 document.getElementById("randomizeButton").addEventListener("click", function () {
-  var layout = cy.layout({
+  let layout = cy.layout({
     name: 'random',
     animate: true
   });
@@ -611,17 +545,6 @@ document.getElementById("fcoseButton").addEventListener("click", function(){
   let finalOptions = Object.assign({}, options);
   finalOptions.step = "all";
   finalOptions.randomize = !(document.getElementById("incremental").checked);
-  
-  if(document.getElementById("sample").value == "sample6"){
-    finalOptions.nestingFactor = 0.4;
-    finalOptions.gravityRangeCompound = 0;
-    finalOptions.gravityCompound = 3.0;
-  }
-  
-  if(document.getElementById("sample").value == "sample8"){
-    finalOptions.idealEdgeLength = 70; 
-  }  
-  
   finalOptions.fixedNodeConstraint = constraints.fixedNodeConstraint ? constraints.fixedNodeConstraint : undefined;
   finalOptions.alignmentConstraint = constraints.alignmentConstraint ? constraints.alignmentConstraint : undefined;
   finalOptions.relativePlacementConstraint = constraints.relativePlacementConstraint ? constraints.relativePlacementConstraint : undefined;
@@ -631,61 +554,10 @@ document.getElementById("fcoseButton").addEventListener("click", function(){
     document.getElementById("fixedNodeY").value = Math.round(cy.getElementById(document.getElementById("nodeList").value).position("y"));
   });
   cy.layoutUtilities("get").setOption("randomize", finalOptions.randomize);
-//  let start = performance.now();
-  layout.run();
-//  console.log((performance.now() - start) + " ms" );
-});
-
-/*
-// CoLa
-document.getElementById("colaButton").addEventListener("click", function(){
-  
-  if(constraints.fixedNodeConstraint) {
-    constraints.fixedNodeConstraint.forEach(function(constraint){
-      cy.getElementById(constraint.nodeId).position({x: constraint.position.x, y: constraint.position.y});
-      cy.getElementById(constraint.nodeId).lock();
-    });
-  }
-  
-  let gapInequalities = [];
-  if(constraints.relativePlacementConstraint) {
-    constraints.relativePlacementConstraint.forEach(function(constraint){
-      if(constraint.left) {
-        gapInequalities.push({"axis": "x", "left": cy.getElementById(constraint.left), "right": cy.getElementById(constraint.right), "gap": constraint.gap});
-      }
-      else {
-        gapInequalities.push({"axis": "y", "left": cy.getElementById(constraint.top), "right": cy.getElementById(constraint.bottom), "gap": constraint.gap});
-      }
-    });
-  }
-  
-  let options = {
-    name: 'cola',
-    animate: false,
-    maxSimulationTime: 20000,
-    randomize: true,
-    unconstrIter: 10, 
-    userConstIter: 15, 
-    allConstIter: 20,
-    handleDisconnected: false,
-    edgeLength: 50,
-    alignment: constraints.alignmentConstraint ? constraints.alignmentConstraint : undefined,
-    gapInequalities: gapInequalities
-  };
-  
-  let layout = cy.layout(options);
-  layout.one("layoutstop", function( event ){
-    document.getElementById("fixedNodeX").value = Math.round(cy.getElementById(document.getElementById("nodeList").value).position("x"));
-    document.getElementById("fixedNodeY").value = Math.round(cy.getElementById(document.getElementById("nodeList").value).position("y"));
-  });
-
   let start = performance.now();
   layout.run();
-  console.log((performance.now() - start) + " ms" );
-  
-  cy.nodes().unlock();
+  console.log("fCOSE ran in " + (performance.now() - start) + " ms" );
 });
-*/
 
 // Draft
 document.getElementById("draftButton").addEventListener("click", function(){
