@@ -1,4 +1,5 @@
 import argparse
+import json
 from logging import DEBUG
 import os
 from pathlib import Path
@@ -6,6 +7,7 @@ from pathlib import Path
 from byparse.visualisation import networkx_to_pyvis, color_context_graph
 from byparse.project_crawl import ProjectCrawler
 from byparse.logging_utils import init_logger
+from byparse.visualisation.cytoscape_fcose import networkx_to_cytoscape_fcose
 
 
 def cli_parser():
@@ -38,15 +40,18 @@ def main():
     graph = project.build_contexts_graph()
     graph = project.build_call_graph(graph)
     color_context_graph(graph)
+    with open(os.path.join("examples_graphs", "cytoexample.json"), "w") as fp:
+        cyto_graph = networkx_to_cytoscape_fcose(graph)
+        json.dump(cyto_graph, fp, indent=2)
 
-    net = networkx_to_pyvis(graph)
-    net.toggle_physics(True)
-    output = args.output
-    if args.output is None:
-        output = Path("examples_graphs", f"{Path(args.root).name}.html")
-        os.makedirs(output.parent, exist_ok=True)
-        output = str(output)
-    net.show(output)
+    # net = networkx_to_pyvis(graph)
+    # net.toggle_physics(True)
+    # output = args.output
+    # if args.output is None:
+    #     output = Path("examples_graphs", f"{Path(args.root).name}.html")
+    #     os.makedirs(output.parent, exist_ok=True)
+    #     output = str(output)
+    # net.show(output)
 
 
 if __name__ == "__main__":

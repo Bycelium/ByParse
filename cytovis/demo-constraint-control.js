@@ -4,11 +4,11 @@ let defaultStylesheet =  [
     selector: 'node',
     style: {
       'background-color': '#bdd3d4',
-      'label': 'data(id)',
+      'label': 'data(label)',
       'text-valign': 'center',
       'background-opacity': 0.7
     }
-  },         
+  },
 
   {
   selector: ':parent',
