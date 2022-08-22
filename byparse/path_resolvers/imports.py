@@ -84,7 +84,7 @@ def resolve_import_ast_alias_path(
 
 def _relative_resolution(module_chain: str, project_root: str) -> Optional[Path]:
     def mod_to_path(module_chain: str, asfile=False) -> Path:
-        str_path = module_chain.replace(".", "/")
+        str_path = module_chain.replace(".", "/").lower()
         if asfile:
             str_path += ".py"
         return Path(project_root) / Path(str_path)
