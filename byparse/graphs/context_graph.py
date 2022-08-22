@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 
 def build_contexts_graph(
     project: "ProjectCrawler",
-    graph: Optional[nx.DiGraph] = None,
-) -> nx.DiGraph:
+    graph: Optional[nx.MultiDiGraph] = None,
+) -> nx.MultiDiGraph:
 
     if graph is None:
-        graph = nx.DiGraph()
+        graph = nx.MultiDiGraph()
 
     for module_path, module_crawler in project.modules.items():
         graph.add_node(
@@ -28,7 +28,7 @@ def build_contexts_graph(
     return graph
 
 
-def _add_parent_folders(graph: nx.DiGraph, path: Path):
+def _add_parent_folders(graph: nx.MultiDiGraph, path: Path):
     parent = path.parent
     if str(parent) != ".":
         graph.add_node(str(parent), label=parent.name, type=NodeType.FOLDER.name)
@@ -37,7 +37,7 @@ def _add_parent_folders(graph: nx.DiGraph, path: Path):
 
 
 def _add_sub_contexts(
-    graph: nx.DiGraph,
+    graph: nx.MultiDiGraph,
     context_path: Path,
     context: "AstContextCrawler",
 ):

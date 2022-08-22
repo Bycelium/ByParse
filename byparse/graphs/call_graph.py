@@ -20,11 +20,11 @@ if TYPE_CHECKING:
 
 def build_call_graph(
     project: "ProjectCrawler",
-    graph: Optional[nx.DiGraph] = None,
-) -> nx.DiGraph:
+    graph: Optional[nx.MultiDiGraph] = None,
+) -> nx.MultiDiGraph:
 
     if graph is None:
-        graph = nx.DiGraph()
+        graph = nx.MultiDiGraph()
 
     for module_path, module in project.modules.items():
         add_context_calls_edges(graph, project, module, module.context, module_path)
@@ -33,7 +33,7 @@ def build_call_graph(
 
 
 def add_context_node(
-    graph: nx.DiGraph, context_path: Union[Path, str], context: "AstContextCrawler"
+    graph: nx.MultiDiGraph, context_path: Union[Path, str], context: "AstContextCrawler"
 ):
     if isinstance(context_path, Path):
         label = context_path.name
@@ -63,7 +63,7 @@ def asts_to_names(asts: List[ast.AST]):
 
 
 def add_context_calls_edges(
-    graph: nx.DiGraph,
+    graph: nx.MultiDiGraph,
     project: "ProjectCrawler",
     module: "ModuleCrawler",
     context: "AstContextCrawler",

@@ -4,7 +4,7 @@ from byparse.abc import NodeType, EdgeType
 
 
 def color_context_graph(
-    graph: nx.DiGraph,
+    graph: nx.MultiDiGraph,
     node_folder_color: str = "rgb(155, 155, 55)",
     node_file_color: str = "rgb(55, 155, 55)",
     node_class_color: str = "#4ec994",
