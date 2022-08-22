@@ -53,12 +53,12 @@ def asts_to_names(asts: List[ast.AST]):
     for ast_elem in asts:
         if ast_elem is None:
             continue
-        elif isinstance(ast_elem, ast.Name):
+        if isinstance(ast_elem, ast.Name):
             annotations_names.append(ast_elem.id)
         elif isinstance(ast_elem, ast.Constant):
             annotations_names.append(ast_elem.value)
         else:
-            raise TypeError(f"Unsupported annotation type: {type(ast_elem)}")
+            LOGGER.warning(f"Unsupported annotation type: {type(ast_elem)}")
     return annotations_names
 
 
@@ -100,7 +100,14 @@ def add_context_calls_edges(
         )
 
         if not name_path:
-            LOGGER.warning("Could not find path for name: %s", name)
+            LOGGER.warning(
+                "Could not find path for name: %s in %s local_known_contexts:%s"
+                " nor in local_used_names:%s",
+                name,
+                str(context.path),
+                str(list(local_known_contexts.keys())),
+                str(list(local_used_names.keys())),
+            )
             return
 
         if project.path.parts[0] in str(name_path):
