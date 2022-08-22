@@ -164,3 +164,6 @@ cython_debug/
 # Custom
 examples/
 examples_graphs/
+
+# NPM
+node_modules/
