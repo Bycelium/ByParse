@@ -35,7 +35,7 @@ def color_context_graph(
         EdgeType.INHERITANCE.name: edge_inheritance_color,
         EdgeType.TYPEHINT.name: edge_type_hint_color,
     }
-    for u, v, data in graph.edges(data=True):
+    for u, v, key, data in graph.edges(data=True, keys=True):
         edge_type = data["type"]
         if edge_type in edge_type_color:
-            graph.edges[u, v]["color"] = edge_type_color[edge_type]
+            graph.edges[u, v, key]["color"] = edge_type_color[edge_type]
