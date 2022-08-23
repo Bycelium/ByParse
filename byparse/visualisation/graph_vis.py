@@ -3,6 +3,16 @@ import networkx as nx
 from byparse.abc import NodeType, EdgeType
 
 
+def compute_parents_and_childs(graph: nx.MultiDiGraph):
+    for source, target, edge_attrs in graph.edges(data=True):
+        if edge_attrs["type"] in (EdgeType.CONTEXT.name, EdgeType.PATH.name):
+            graph.nodes[source]["parent"] = target
+            if "childs" in graph.nodes[target]:
+                graph.nodes[target]["childs"].append(source)
+            else:
+                graph.nodes[target]["childs"] = [source]
+
+
 def color_context_graph(
     graph: nx.MultiDiGraph,
     node_folder_color: str = "#87847c",

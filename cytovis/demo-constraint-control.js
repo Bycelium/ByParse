@@ -311,10 +311,8 @@ $("body").on("change", "#inputFile", function (e, fileObject) {
       if (fileExtension == "graphml" || fileExtension == "xml") {
         cy.graphml({layoutBy: 'null'});
         cy.graphml(content);
-//        updateGraphStyle();
       } else if (fileExtension == "json") {
         cy.json({elements: JSON.parse(content)});
-//        updateGraphStyle();
       } else {
         var tsv = cy.tsv();
         tsv.importTo(content);
@@ -339,39 +337,6 @@ $("body").on("change", "#inputFile", function (e, fileObject) {
   }
   $("#inputFile").val(null);
 });
-
-let updateGraphStyle = function () {
-  cy.nodes().forEach(function (node) {
-    node.style({
-      'background-image': node.data('background-image'),
-      'width': node.data('bbox').w,
-      'height': node.data('bbox').h,
-      "border-width": node.data('border-width'),
-      "border-color": node.data('border-color'),
-      "background-color": node.data('background-color'),
-      "background-opacity": node.data('background-opacity'),
-      "background-fit": "cover",
-      "background-position-x": "50%",
-      "background-position-y": "50%",
-      "text-wrap": "wrap",
-      "font-size": node.data('font-size'),
-      "color": node.data('color')
-    });
-
-    if (node.data('label')) {
-      node.style({
-        'label': node.data('label')
-      });
-    }
-  });
-
-  cy.edges().forEach(function (edge) {
-    edge.style({
-      'width': edge.data('width'),
-      "line-color": edge.data('line-color')
-    });
-  });
-};
 
 $("body").on("change", "#inputConstraint", function (e, fileObject) {
   let inputFile = this.files[0] || fileObject;
@@ -525,16 +490,25 @@ document.getElementById("sample").addEventListener("change", function(){
 
 let options = {
   name: 'fcose',
-  quality: "default",
+  quality: "proof",
+  nodeDimensionsIncludeLabels: true,
   randomize: true,
-  animate: true,
+  animate: false,
   animationDuration: 1000,
   animationEasing: undefined,
   fit: true,
   padding: 30,
-  nestingFactor: 0.1,
+  nestingFactor: 0.8,
+  nodeSeparation: 250,
   gravityRangeCompound: 1.5,
-  gravityCompound: 1.0
+  gravityCompound: 1.0,
+  numIter: 5000,
+  // Node repulsion (non overlapping) multiplier
+  nodeRepulsion: _node => 15000,
+  // Ideal edge (non nested) length
+  idealEdgeLength: _edge => 75,
+  // Divisor to compute edge forces
+  edgeElasticity: _edge => 0.8,
 };
 
 // Randomize

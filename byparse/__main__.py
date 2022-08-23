@@ -4,10 +4,17 @@ from logging import DEBUG
 import os
 from pathlib import Path
 
-from byparse.visualisation import networkx_to_pyvis, color_context_graph
+from byparse.visualisation import (
+    networkx_to_pyvis,
+    color_context_graph,
+    compute_parents_and_childs,
+)
 from byparse.project_crawl import ProjectCrawler
 from byparse.logging_utils import init_logger
-from byparse.visualisation.cytoscape_fcose import networkx_to_cytoscape_fcose
+from byparse.visualisation.cytoscape_fcose import (
+    networkx_to_cytoscape_fcose,
+    networkx_to_cytoscape_fcose_constraints,
+)
 
 
 def cli_parser():
@@ -47,9 +54,15 @@ def main():
         output = str(output)
 
     color_context_graph(graph)
+    compute_parents_and_childs(graph)
+
     with open(output, "w") as fp:
         cyto_graph = networkx_to_cytoscape_fcose(graph)
         json.dump(cyto_graph, fp, indent=2)
+
+    with open(output.split(".")[0] + "_constraints.json", "w") as fp:
+        cyto_graph_constraints = networkx_to_cytoscape_fcose_constraints(graph)
+        json.dump(cyto_graph_constraints, fp, indent=2)
 
 
 if __name__ == "__main__":
