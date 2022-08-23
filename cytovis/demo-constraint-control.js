@@ -3,18 +3,18 @@ let defaultStylesheet =  [
   {
     selector: 'node',
     style: {
-      'background-color': '#bdd3d4',
+      'background-color': 'data(color)',
       'label': 'data(label)',
       'text-valign': 'center',
-      'background-opacity': 0.7
+      'background-opacity': 0.8
     }
   },
 
   {
   selector: ':parent',
     style: {
-//      'background-opacity': 0.333,
-      'background-color': '#e8e8e8',
+     'background-opacity': 0.7,
+      'background-color': 'data(color)',
       'border-color': '#DADADA',
 //      'border-width': 3,
       'text-valign': 'bottom'
@@ -25,10 +25,17 @@ let defaultStylesheet =  [
     selector: 'edge',
     style: {
       'curve-style': 'straight',
-      'line-color': '#bdd3d4'
+      'line-color': 'data(color)',
+      'line-style': 'data(linestyle)'
     }
   },
-
+  {
+    'selector': 'edge[arrow]',
+    'style': {
+      'target-arrow-shape': 'data(arrow)',
+      'target-arrow-color': 'data(color)',
+    }
+  },
   {
     selector: 'node:selected',
     style: {

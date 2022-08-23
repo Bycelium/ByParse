@@ -39,19 +39,17 @@ def main():
     project = ProjectCrawler(args.root, exclude=args.exclude)
     graph = project.build_contexts_graph()
     graph = project.build_call_graph(graph)
+
+    output = args.output
+    if args.output is None:
+        output = Path("examples_graphs", f"{Path(args.root).name}.json")
+        os.makedirs(output.parent, exist_ok=True)
+        output = str(output)
+
     color_context_graph(graph)
-    with open(os.path.join("examples_graphs", "cytoexample.json"), "w") as fp:
+    with open(output, "w") as fp:
         cyto_graph = networkx_to_cytoscape_fcose(graph)
         json.dump(cyto_graph, fp, indent=2)
-
-    # net = networkx_to_pyvis(graph)
-    # net.toggle_physics(True)
-    # output = args.output
-    # if args.output is None:
-    #     output = Path("examples_graphs", f"{Path(args.root).name}.html")
-    #     os.makedirs(output.parent, exist_ok=True)
-    #     output = str(output)
-    # net.show(output)
 
 
 if __name__ == "__main__":
