@@ -16,7 +16,7 @@ def compute_parents_and_childs(graph: nx.MultiDiGraph):
 def color_context_graph(
     graph: nx.MultiDiGraph,
     node_folder_color: str = "#87847c",
-    node_file_color: str = "rgb(55, 155, 55)",
+    node_file_color: str = "#379b37",
     node_class_color: str = "#4ec994",
     node_func_color: str = "#e0e069",
     node_lib_color: str = "grey",

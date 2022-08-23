@@ -5,6 +5,7 @@ let defaultStylesheet =  [
     style: {
       'background-color': 'data(color)',
       'label': 'data(label)',
+      'shape': 'round-rectangle', 
       'text-valign': 'center',
       'background-opacity': 0.8
     }
@@ -13,10 +14,11 @@ let defaultStylesheet =  [
   {
   selector: ':parent',
     style: {
-     'background-opacity': 0.7,
+      'background-opacity': 0.6,
       'background-color': 'data(color)',
-      'border-color': '#DADADA',
-//      'border-width': 3,
+      'border-color': '#000000',
+      'border-width': 0,
+      'shape': 'round-rectangle', 
       'text-valign': 'bottom'
     }
   },
@@ -492,8 +494,8 @@ let options = {
   name: 'fcose',
   quality: "proof",
   nodeDimensionsIncludeLabels: true,
-  randomize: true,
-  animate: false,
+  randomize: false,
+  animate: true,
   animationDuration: 1000,
   animationEasing: undefined,
   fit: true,
