@@ -1,4 +1,6 @@
-<html>
+<!DOCTYPE html>
+
+<html xml:lang>
 
 <head>
     <title>cytoscape-fcose.js demo</title>
@@ -210,7 +212,6 @@
         <!-- Layout Menu-->
         <button id="randomizeButton" class="btn btn-primary btn-sm mb-2 ml-2">Randomize</button>&nbsp
         <button id="fcoseButton" class="btn btn-primary btn-sm mb-2">fCoSE</button>&nbsp
-        <!--    <button id="colaButton" class="btn btn-primary btn-sm mb-2">CoLa</button>&nbsp -->
         <div class="custom-control custom-control-inline custom-checkbox">
             <input type="checkbox" class="custom-control-input" id="incremental" name="incremental">
             <label class="custom-control-label" for="incremental">Incremental</label>
@@ -225,24 +226,25 @@
         <div id="mySidepanel" class="sidepanel">
             <!-- Constraints Menu -->
             <table id="ConstraintIOTable">
-                <tr>
-                    <td style="width: 25%">
-                        <h7 class="card-subtitle mt-1 text-muted"><b>Constraints</b></h7>
-                    </td>
-                    <td><button id="importConstraint" type="button" class="btn btn-primary btn-sm ml-1"
-                            onclick="document.getElementById('inputConstraint').click();" data-toggle="tooltip"
-                            title="Import constraint file">Import</button>
-                        <input id="inputConstraint" type='file' style="display: none" />
-                    </td>
-                    <td><button id="exportConstraint" type="button" class="btn btn-primary btn-sm" data-toggle="tooltip"
-                            title="Export constraint file">Export</button></td>
-                    <td style="width: 35%"></td>
-                </tr>
+                <th>
+                    <tr>
+                        <td style="width: 25%">
+                            <h7 class="card-subtitle mt-1 text-muted"><b>Constraints</b></h7>
+                        </td>
+                        <td><button id="importConstraint" type="button" class="btn btn-primary btn-sm ml-1"
+                                onclick="document.getElementById('inputConstraint').click();" data-toggle="tooltip"
+                                title="Import constraint file">Import</button>
+                            <input id="inputConstraint" type='file' style="display: none" />
+                        </td>
+                        <td><button id="exportConstraint" type="button" class="btn btn-primary btn-sm"
+                                data-toggle="tooltip" title="Export constraint file">Export</button></td>
+                        <td style="width: 35%"></td>
+                    </tr>
+                </th>
             </table>
 
             <hr class="line">
 
-            <!-- <button id="saveAsSVG" type="button" class="layoutButton" data-toggle="tooltip" title="Save graph as SVG file">Save as SVG</button> -->
             <!-- Fixed Node Constraints -->
             <form>
                 <div class="form-row">
