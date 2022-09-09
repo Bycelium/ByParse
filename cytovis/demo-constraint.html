@@ -187,9 +187,17 @@
 <body>
     <div class="sidepanel" style='width: 375px; position: absolute;'>
         <!-- File menu-->
+
         <input id="inputFile" type='file' style="display: none" />
         <input type="button" id="openFile" type="button" class="btn btn-primary btn-sm ml-2" data-toggle="tooltip"
             title="Load graphml file" value="Load Graph" />
+
+        <input id="inputConstraint" type="file" style="display:none"/>
+        <input type="button" id="openConstraintFile" class="btn btn-primary btn-sm ml-2" data-toggle="tooltip"
+            title="Load graphml file" value="Load Constraints" />
+
+        <input type="button" id="fcoseButton" class="btn btn-primary btn-sm ml-2" value="Rearrange nodes"></input>
+
     </div>
     <div id="cy"></div>
 </body>
