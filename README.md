@@ -1,14 +1,37 @@
-# Python Static Analysis tools
+# ByParse
 
-Build with Python 3.8.10 in mind.
+A library to parse python projects and build the graph of all symbolic connexions.
 
-A set of scripts that perform static analysis on Python code as well as some sample projects
-to test them.
+Instead of this:
 
-## Static analysis of the static analysis:
+![toy_project_root](assets/toy_project_root.png)
 
-Useful commands to make sure everything works properly:
+It ables you to see this:
 
-- `pytest to_graph.py -s`
-- `pylint to_graph.py`
-- `mypy to_graph.py`
+![toy_graph_image](assets/toy_graph_fcose.png)
+
+# Installation
+
+```bash
+pip install git+https://gitea.bycelium.com/vanyle/ByParse.git
+```
+
+# Usage
+
+## Produce a graph
+
+```bash
+byparse -r path/to/project/root
+```
+
+For more details:
+
+```bash
+byparse --help
+```
+
+## Visualize a graph
+
+### Using cytoscape
+
+See [cytoscape usage](cytovis/README.md).

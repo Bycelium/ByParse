@@ -63,12 +63,12 @@ def main():
     color_context_graph(graph)
     compute_parents_and_childs(graph)
 
+    cyto_graph = networkx_to_cytoscape_fcose(graph)
     with open(output, "w") as fp:
-        cyto_graph = networkx_to_cytoscape_fcose(graph)
         json.dump(cyto_graph, fp, indent=2)
 
+    cyto_graph_constraints = networkx_to_cytoscape_fcose_constraints(graph)
     with open(output.split(".")[0] + "_constraints.json", "w") as fp:
-        cyto_graph_constraints = networkx_to_cytoscape_fcose_constraints(graph)
         json.dump(cyto_graph_constraints, fp, indent=2)
 
 
