@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+
+[project]
+name = "byparse"
+dynamic = ["version", "readme", "dependencies"]
+license = {text = "Apache-2.0 license"}
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+pyvis = ["pyvis"]
+
+[tool.setuptools]
+license-files = ['LICEN[CS]E*', 'COPYING*', 'NOTICE*', 'AUTHORS*']
+
+[project.scripts]
+byparse = "byparse.__main__:main"
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
