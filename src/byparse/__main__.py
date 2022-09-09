@@ -22,7 +22,7 @@ def cli_parser():
     parser.add_argument(
         "--root",
         "-r",
-        help="Root directory of the project to parse.",
+        help="Root directory of the project to parse. Defaults to toy_project.",
         default="tests/integration/toy_project",
     )
     parser.add_argument(
@@ -37,12 +37,19 @@ def cli_parser():
         help="Ignored folders.",
         default=None,
     )
+    parser.add_argument(
+        "--log-level",
+        "-v",
+        help="Logging level. (DEBUG <= 10, INFO <= 20, WARNING <= 30)",
+        default=20,
+        type=int,
+    )
     return parser.parse_args()
 
 
 def main():
     args = cli_parser()
-    init_logger(log_level=DEBUG, package_name=__package__)
+    init_logger(log_level=args.log_level, package_name=__package__)
     project = ProjectCrawler(args.root, exclude=args.exclude)
     graph = project.build_contexts_graph()
     graph = project.build_call_graph(graph)

@@ -100,7 +100,7 @@ def add_context_calls_edges(
         )
 
         if not name_path:
-            LOGGER.warning(
+            LOGGER.debug(
                 "Could not find path for name: %s in %s local_known_contexts:%s"
                 " nor in local_used_names:%s",
                 name,
