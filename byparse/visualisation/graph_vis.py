@@ -3,10 +3,20 @@ import networkx as nx
 from byparse.abc import NodeType, EdgeType
 
 
+def compute_parents_and_childs(graph: nx.MultiDiGraph):
+    for source, target, edge_attrs in graph.edges(data=True):
+        if edge_attrs["type"] in (EdgeType.CONTEXT.name, EdgeType.PATH.name):
+            graph.nodes[source]["parent"] = target
+            if "childs" in graph.nodes[target]:
+                graph.nodes[target]["childs"].append(source)
+            else:
+                graph.nodes[target]["childs"] = [source]
+
+
 def color_context_graph(
-    graph: nx.DiGraph,
-    node_folder_color: str = "rgb(155, 155, 55)",
-    node_file_color: str = "rgb(55, 155, 55)",
+    graph: nx.MultiDiGraph,
+    node_folder_color: str = "#87847c",
+    node_file_color: str = "#379b37",
     node_class_color: str = "#4ec994",
     node_func_color: str = "#e0e069",
     node_lib_color: str = "grey",
@@ -35,7 +45,14 @@ def color_context_graph(
         EdgeType.INHERITANCE.name: edge_inheritance_color,
         EdgeType.TYPEHINT.name: edge_type_hint_color,
     }
-    for u, v, data in graph.edges(data=True):
+    edge_type_linestyle = {
+        EdgeType.TYPEHINT.name: "dashed",
+    }
+    for u, v, key, data in graph.edges(data=True, keys=True):
         edge_type = data["type"]
         if edge_type in edge_type_color:
-            graph.edges[u, v]["color"] = edge_type_color[edge_type]
+            graph.edges[u, v, key]["color"] = edge_type_color[edge_type]
+        if edge_type in edge_type_linestyle:
+            graph.edges[u, v, key]["linestyle"] = edge_type_linestyle[edge_type]
+        if edge_type == EdgeType.INHERITANCE.name:
+            graph.edges[u, v, key]["arrow"] = "diamond"
