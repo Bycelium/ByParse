@@ -165,3 +165,6 @@ cython_debug/
 examples/
 examples_graphs/
 nodes.html
+
+# NodeJS
+node_modules
