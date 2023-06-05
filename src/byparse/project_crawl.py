@@ -7,7 +7,8 @@ import networkx as nx
 
 from byparse.context_crawl import AstContextCrawler
 from byparse.utils import pretty_path_name
-from byparse.graphs import build_contexts_graph, build_call_graph
+from byparse.graphs.context_graph import build_contexts_graph
+from byparse.graphs.call_graph import build_call_graph
 from byparse.logging_utils import get_logger
 
 LOGGER = get_logger(__name__)

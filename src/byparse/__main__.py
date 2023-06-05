@@ -1,11 +1,9 @@
 import argparse
 import json
-from logging import DEBUG
 import os
 from pathlib import Path
 
-from byparse.visualisation import (
-    networkx_to_pyvis,
+from byparse.visualisation.graph_vis import (
     color_context_graph,
     compute_parents_and_childs,
 )

@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import ast
 import networkx as nx
 
-from byparse.abc import NodeType, EdgeType
+from byparse.abc import EdgeType
 from byparse.utils import link_path_to_name, root_ast_to_node_type
 from byparse.path_resolvers.imports import resolve_aliases_paths
 from byparse.path_resolvers.names import resolve_name

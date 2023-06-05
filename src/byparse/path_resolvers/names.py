@@ -1,6 +1,6 @@
 import ast
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 
 from byparse.abc import NodeType
