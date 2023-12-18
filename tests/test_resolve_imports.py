@@ -14,7 +14,7 @@ class TestResolveImportAstPaths:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.project_root = Path(__file__).parent.parent / Path("toy_project")
+        self.project_root = Path(__file__).parent / "toy_project"
 
     def test_single_package_import(self):
         pkg_alias = ast.alias(name="package")
@@ -79,7 +79,6 @@ class TestResolveImportAstPaths:
         check.equal(set(alias_to_path.values()), set(expected_aliases_paths.values()))
 
     def test_single_librairy_not_found(self, mocker: MockerFixture):
-
         mocker.patch(
             "byparse.path_resolvers.imports.find_spec",
             return_value=None,

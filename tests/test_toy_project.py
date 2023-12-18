@@ -19,7 +19,7 @@ def nodes_to_str_set(dict_list: List[dict]) -> Set[str]:
 class TestToyProject:
     @pytest.fixture(autouse=True)
     def setup(self):
-        toy_project_path = Path(__file__).parent / Path("toy_project")
+        toy_project_path = Path(__file__).parent / "toy_project"
         self.project = ProjectCrawler(toy_project_path)
 
     def test_toy_project_context_graph(self):
@@ -261,7 +261,7 @@ class TestToyProject:
         graph_data = node_link_data(graph)
         expected_graph_data = node_link_data(expected_graph)
 
-        check.equal(
+        check.assert_equal(
             nodes_to_str_set(graph_data["nodes"]),
             nodes_to_str_set(expected_graph_data["nodes"]),
         )
