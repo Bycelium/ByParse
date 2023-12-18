@@ -9,6 +9,7 @@ requires-python = ">=3.7"
 
 [project.optional-dependencies]
 pyvis = ["pyvis"]
+dev = ["ruff", "pytest", "pytest-check", "pytest-mock", "pytest-cov", "mypy"]
 
 [tool.setuptools]
 license-files = ['LICEN[CS]E*', 'COPYING*', 'NOTICE*', 'AUTHORS*']

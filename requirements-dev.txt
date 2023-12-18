@@ -1,6 +1,0 @@
-pytest
-pytest-check
-pytest-mock
-pylint
-black
-mypy
