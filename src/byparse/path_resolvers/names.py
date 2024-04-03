@@ -91,7 +91,9 @@ def resolve_import_path_chain(
     call_true_path: Path,
     project_path: Path,
 ):
-    target: "ModuleCrawler" = project_modules[call_true_path.relative_to(project_path)]
+    target: "ModuleCrawler" = project_modules[
+        call_true_path.absolute().relative_to(project_path.absolute())
+    ]
 
     while (
         alias_name not in target.context.known_names
@@ -118,8 +120,12 @@ def resolve_import_path_chain(
 
         target_path = resolve_import_ast_paths(import_from_ast, str(target.root))
         target_path = list(target_path.values())[0]
-        target = project_modules[target_path.relative_to(target.root)]
+        target = project_modules[
+            target_path.absolute().relative_to(target.root.absolute())
+        ]
         call_true_path = target_path
+
+
 
     if alias_name in target.context.functions or call_end in target.context.functions:
         call_type = NodeType.FUNCTION.name
@@ -140,7 +146,6 @@ def resolve_name(
     local_aliases_paths: Dict["ast.alias", Path],
     with_deps=False,
 ) -> Tuple[Optional[Path], NodeType]:
-
     name_path, name_type = resolve_same_module_name(name, local_known_contexts)
     if name_path is not None:
         return name_path.relative_to(project_path), name_type
